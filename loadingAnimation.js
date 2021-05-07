@@ -6,7 +6,7 @@ import { GUI } from "./lib/dat.gui.js";
 import Stats from "./lib/stats.js";
 import easing from "./lib/easings.js";
 
-var canvas, stats, camera, scene, renderer, material, centerArrow, arrow, gui, guiData;
+var canvas, stats, camera, scene, renderer, rocks, centerArrow, arrow, gui, guiData;
 var animationTime = 0;
 
 var lerp = function (f, t, a) {
@@ -19,13 +19,27 @@ animate();
 
 function init() {
 
+    guiData = {
+        spaceshipLogoSize: 1,
+        totalAnimationTime: 5,
+        cameraStartY: 5,
+        cameraDistanceZ: 30,
+        cameraEndY: 15,
+        cameraFOV: 50,
+        spaceshipStartY: -10,
+        spaceshipEndY: 15,
+        holeSize: 30,
+        DEBUG_CENTER_SCREEN: false,
+        DEBUG_RESIZABLE_WINDOW: false
+    }
+
     stats = new Stats();
     document.getElementById('container').appendChild(stats.dom);
     scene = new THREE.Scene();
 
-    camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 100);
-    camera.position.z = 30;
-    camera.position.y = 5;
+    camera = new THREE.PerspectiveCamera(guiData.cameraFOV, window.innerWidth / window.innerHeight, 1, 1000);
+    camera.position.z = guiData.cameraDistanceZ;
+    camera.position.y = guiData.cameraStartY;
     scene.add(camera);
 
     createDebugGUI();
@@ -43,7 +57,7 @@ function init() {
         0, 0, 0
     ]);
     centerArrowGeometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
-    material = new THREE.MeshBasicMaterial({
+    const material = new THREE.MeshBasicMaterial({
         color: 0xffffbb,
         transparent: true,
         opacity: 0.75
@@ -51,8 +65,8 @@ function init() {
 
     centerArrow = new THREE.Mesh(centerArrowGeometry, material);
     // plane helper
-    const floorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-    const helper = new THREE.PlaneHelper(floorPlane, 50, 0x11cc00);
+    const floorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0.02);
+    const helper = new THREE.PlaneHelper(floorPlane, 20, 0x11cc00);
     scene.add(helper);
 
     // moving arrow
@@ -74,52 +88,110 @@ function init() {
 
     document.body.appendChild(renderer.domElement);
 
+    const invisibleMaterial = new THREE.MeshBasicMaterial({ colorWrite: false});
+
     // SVGs
 
     const loader = new SVGLoader();
 
     loader.load("res/arrow_ship.svg",
-    function (data) {
-        const paths = data.paths;
-        const path = paths[0];
-        const material = new THREE.MeshBasicMaterial({
-            color: path.color
-        });
-        const shapes = SVGLoader.createShapes(path);
-        const shape = shapes[0];
-        const geometry = new THREE.ShapeGeometry(shape);
+        function (data) {
+            const paths = data.paths;
+            const path = paths[0];
+            const material = new THREE.MeshBasicMaterial({
+                color: path.color
+            });
+            const shapes = SVGLoader.createShapes(path);
+            const shape = shapes[0];
+            const geometry = new THREE.ShapeGeometry(shape);
 
-        const positions = geometry.attributes.position;
+            const positions = geometry.attributes.position;
 
-        var extents = {
-            x: { min: Number.POSITIVE_INFINITY, max: Number.NEGATIVE_INFINITY },
-            y: { min: Number.POSITIVE_INFINITY, max: Number.NEGATIVE_INFINITY }
-        };
-        for (let i = 0; i < positions.array.length;) {
-            let x = positions.array[i];
-            let y = positions.array[i + 1];
+            var extents = {
+                x: { min: Number.POSITIVE_INFINITY, max: Number.NEGATIVE_INFINITY },
+                y: { min: Number.POSITIVE_INFINITY, max: Number.NEGATIVE_INFINITY }
+            };
+            for (let i = 0; i < positions.array.length;) {
+                let x = positions.array[i];
+                let y = positions.array[i + 1];
 
-            //console.log(`arrow path (${x}, ${y})`);
+                //console.log(`arrow path (${x}, ${y})`);
 
-            if (x < extents.x.min) extents.x.min = x;
-            if (x > extents.x.max) extents.x.max = x;
-            if (y < extents.y.min) extents.y.min = y;
-            if (y > extents.y.max) extents.y.max = y;
+                if (x < extents.x.min) extents.x.min = x;
+                if (x > extents.x.max) extents.x.max = x;
+                if (y < extents.y.min) extents.y.min = y;
+                if (y > extents.y.max) extents.y.max = y;
 
-            i += positions.itemSize;
+                i += positions.itemSize;
+            }
+            arrow.extents = extents;
+
+            arrow.resizeArrow = function (s) {
+                var size = s / (arrow.extents.y.max - arrow.extents.y.min);
+                arrow.meshObject.scale.set(size, size, size);
+                arrow.meshObject.position.set((arrow.extents.x.max - arrow.extents.x.min) * 0.5 * size, (arrow.extents.y.max - arrow.extents.y.min) * 0.5 * size, 0);
+            }
+            arrow.meshObject = new THREE.Mesh(geometry, material);
+            arrow.add(arrow.meshObject);
+            arrow.meshObject.setRotationFromAxisAngle(new THREE.Vector3(0, 0, -1), Math.PI);
+            arrow.resizeArrow(guiData.spaceshipLogoSize);
         }
-        arrow.extents = extents;
+    );
+    loader.load("res/Wormhole_Cutouthole.svg",
+        function (data) {
+            const paths = data.paths;
+            rocks = new THREE.Group();
+            var extents = {
+                x: { min: Number.POSITIVE_INFINITY, max: Number.NEGATIVE_INFINITY },
+                y: { min: Number.POSITIVE_INFINITY, max: Number.NEGATIVE_INFINITY }
+            };
 
-        arrow.resizeArrow = function (s) {
-            var size = s / (arrow.extents.y.max - arrow.extents.y.min);
-            arrow.meshObject.scale.set(size, size, size);
-            arrow.meshObject.position.set((arrow.extents.x.max - arrow.extents.x.min) * 0.5 * size, (arrow.extents.y.max - arrow.extents.y.min) * 0.5 * size, 0);
+            for (let i = 0; i < paths.length; ++i) {
+                const path = paths[i];
+                const material = new THREE.MeshBasicMaterial({
+                    color: path.color,
+                    side: THREE.DoubleSide
+                });
+                const shapes = SVGLoader.createShapes(path);
+
+                //console.log(`path ${i} has ${shapes.length} shapes`);
+
+                for (let j = 0; j < shapes.length; ++j) {
+                    const shape = shapes[j];
+                    const geometry = new THREE.ShapeGeometry(shape);
+
+                    const positions = geometry.attributes.position;
+
+                    for (let p = 0; p < positions.array.length;) {
+                        let x = positions.array[p];
+                        let y = positions.array[p + 1];
+
+                        if (x < extents.x.min) extents.x.min = x;
+                        if (x > extents.x.max) extents.x.max = x;
+                        if (y < extents.y.min) extents.y.min = y;
+                        if (y > extents.y.max) extents.y.max = y;
+
+                        p += positions.itemSize;
+                    }
+
+                    const mesh = new THREE.Mesh(geometry, invisibleMaterial);
+                    mesh.position.z = i*3;
+                    //if (i == 0)
+                        rocks.add(mesh);
+                }
+            }
+            rocks.setRotationFromAxisAngle(new THREE.Vector3(-1, 0, 0), Math.PI * 0.5);
+            rocks.extents = extents;
+            rocks.resizeHole = function (s) {
+                var size = s / (rocks.extents.x.max - rocks.extents.x.min);
+                rocks.scale.set(size, size, size);
+                rocks.position.set(-(rocks.extents.x.max - rocks.extents.x.min) * 0.5 * size, 0, (rocks.extents.y.max - rocks.extents.y.min) * 0.5 * size);
+
+            };
+            rocks.resizeHole(guiData.holeSize);
+            scene.add(rocks);
         }
-        arrow.meshObject = new THREE.Mesh(geometry, material);
-        arrow.add(arrow.meshObject);
-        arrow.meshObject.setRotationFromAxisAngle(new THREE.Vector3(0, 0, -1), Math.PI);
-        arrow.resizeArrow(guiData.spaceshipLogoSize);
-    });
+    );
 }
 
 function createDebugGUI ()
@@ -128,27 +200,24 @@ function createDebugGUI ()
 
     gui = new GUI({ width: 350 });
 
-    guiData = {
-        spaceshipLogoSize: 1,
-        totalAnimationTime: 5,
-        cameraStartY: 5,
-        cameraEndY: 15,
-        spaceshipStartY: -10,
-        spaceshipEndY: 15,
-        DEBUG_CENTER_SCREEN: false,
-        DEBUG_RESIZABLE_WINDOW: false
-    }
-
     // GUI
 
     gui.add(guiData, "spaceshipLogoSize", 0.001, 20).name("Spaceship-Logo Size").onChange(function () { arrow.resizeArrow(guiData.spaceshipLogoSize); });
     gui.add(guiData, "totalAnimationTime", 1, 40).name("Animation Time").onChange(restart);
     var cameraGUI = gui.addFolder("Camera");
+    cameraGUI.add(guiData, "cameraFOV", 10, 90).name("Field of View").onChange(function () { camera.fov = guiData.cameraFOV; camera.updateProjectionMatrix(); });
+    cameraGUI.add(guiData, "cameraDistanceZ", 0.5, 100).name("Z distance").onChange(function () { camera.position.z = guiData.cameraDistanceZ; });
     cameraGUI.add(guiData, "cameraStartY").name("start Y position").onChange(restart);
     cameraGUI.add(guiData, "cameraEndY").name("end Y position").onChange(restart);
     var spaceshipGUI = gui.addFolder("Spaceship");
     spaceshipGUI.add(guiData, "spaceshipStartY").name("start Y position").onChange(restart);
     spaceshipGUI.add(guiData, "spaceshipEndY").name("end Y position").onChange(restart);
+    var holeGUI = gui.addFolder("Wormhole");
+    holeGUI.add(guiData, "holeSize", 0, 100).name("Hole Size").onChange(function () {
+        rocks.resizeHole(guiData.holeSize);
+        restart();
+    });
+
     var debugGUI = gui.addFolder("DEBUG");
     debugGUI.add(guiData, "DEBUG_RESIZABLE_WINDOW").name("Resizable Window");
     debugGUI.add(guiData, "DEBUG_CENTER_SCREEN").name("Show screen center").onChange(function () {
