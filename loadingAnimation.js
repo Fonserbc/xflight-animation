@@ -217,7 +217,7 @@ function createDebugGUI ()
     var debugGUI = gui.addFolder("DEBUG");
     debugGUI.add(guiData, "DEBUG_RESIZABLE_WINDOW").name("Resizable Window");
     debugGUI.add(guiData, "DEBUG_PLANE").name("Show debug plane").onChange(function () {
-        if (guiData.DEBUG_CENTER_SCREEN)
+        if (guiData.DEBUG_PLANE)
             scene.add(DEBUG_plane);
         else scene.remove(DEBUG_plane);
     });
