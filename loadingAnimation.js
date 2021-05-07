@@ -8,6 +8,7 @@ import easing from "./lib/easings.js";
 
 var canvas, stats, camera, scene, renderer, rocks, centerArrow, arrow, gui, guiData;
 var animationTime = 0;
+var DEBUG_plane;
 
 var lerp = function (f, t, a) {
     return f * (1 - a) + t * a;
@@ -29,7 +30,7 @@ function init() {
         spaceshipStartY: -10,
         spaceshipEndY: 15,
         holeSize: 30,
-        DEBUG_CENTER_SCREEN: false,
+        DEBUG_PLANE: true,
         DEBUG_RESIZABLE_WINDOW: false
     }
 
@@ -44,30 +45,10 @@ function init() {
 
     createDebugGUI();
 
-    // DEBUG
-    // center debug arrow
-    const centerArrowGeometry = new THREE.BufferGeometry();
-    const vertices = new Float32Array([
-        -1.0, 2.2, 0,
-        0, 0, 0,
-        0.0, 1.8, 0,
-
-        1.0, 2.2, 0,
-        0.0, 1.8, 0,
-        0, 0, 0
-    ]);
-    centerArrowGeometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
-    const material = new THREE.MeshBasicMaterial({
-        color: 0xffffbb,
-        transparent: true,
-        opacity: 0.75
-    });
-
-    centerArrow = new THREE.Mesh(centerArrowGeometry, material);
-    // plane helper
+    // DEBUG plane helper
     const floorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0.02);
-    const helper = new THREE.PlaneHelper(floorPlane, 20, 0x11cc00);
-    scene.add(helper);
+    DEBUG_plane = new THREE.PlaneHelper(floorPlane, 50, 0x11cc00);
+    if (guiData.DEBUG_PLANE) scene.add(DEBUG_plane);
 
     // moving arrow
 
@@ -88,7 +69,12 @@ function init() {
 
     document.body.appendChild(renderer.domElement);
 
-    const invisibleMaterial = new THREE.MeshBasicMaterial({ colorWrite: false});
+    const bgTexture = new THREE.TextureLoader().load('res/bg_starfield2x.jpg');
+    bgTexture.wrapS = THREE.MirroredRepeatWrapping;
+    bgTexture.wrapT = THREE.MirroredRepeatWrapping;
+
+    const invisibleMaterial = new THREE.MeshBasicMaterial({ colorWrite: false });
+    const piecesMaterial = new THREE.MeshLambertMaterial({ envMap: bgTexture });//new THREE.MeshBasicMaterial({ color: 0x111111, map: bgTexture });
 
     // SVGs
 
@@ -174,10 +160,20 @@ function init() {
                         p += positions.itemSize;
                     }
 
-                    const mesh = new THREE.Mesh(geometry, invisibleMaterial);
+                    const mesh = new THREE.Mesh(geometry, i == 0 ? invisibleMaterial : piecesMaterial);
                     mesh.position.z = i*3;
-                    //if (i == 0)
-                        rocks.add(mesh);
+                    rocks.add(mesh);
+                    if (i == 0) {
+                        // This is the triangle that is going to block the bottom side
+                        const frontBlocker = new THREE.BufferGeometry();
+                        const vertices = new Float32Array([
+                            extents.x.min, extents.y.min, 0,
+                            (extents.x.min + extents.x.max) * 0.5, extents.y.min, -1000,
+                            extents.x.max, extents.y.min, 0
+                        ]);
+                        frontBlocker.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+                        rocks.add(new THREE.Mesh(frontBlocker, invisibleMaterial));
+                    }
                 }
             }
             rocks.setRotationFromAxisAngle(new THREE.Vector3(-1, 0, 0), Math.PI * 0.5);
@@ -220,10 +216,10 @@ function createDebugGUI ()
 
     var debugGUI = gui.addFolder("DEBUG");
     debugGUI.add(guiData, "DEBUG_RESIZABLE_WINDOW").name("Resizable Window");
-    debugGUI.add(guiData, "DEBUG_CENTER_SCREEN").name("Show screen center").onChange(function () {
-        if (guiData.debugScreenCenter)
-            scene.add(centerArrow);
-        else scene.remove(centerArrow);
+    debugGUI.add(guiData, "DEBUG_PLANE").name("Show debug plane").onChange(function () {
+        if (guiData.DEBUG_CENTER_SCREEN)
+            scene.add(DEBUG_plane);
+        else scene.remove(DEBUG_plane);
     });
 
     // GUI
