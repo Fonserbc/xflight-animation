@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html>
 <head>
     <link rel="icon" href="favicon.svg" />
@@ -10,7 +10,7 @@
 
         body {
             background-color: black;
-            background-image: url("bg_starfield%402x.jpg");
+            background-image: url("res/bg_starfield%402x.jpg");
             background-size: cover;
         }
 
@@ -27,103 +27,12 @@
     <title>xflight animation</title>
 </head>
 <body>
+    <div id="container"></div>
     <div id="logo">
 
     </div>
     <canvas id="c"></canvas>
-    <script type="module">
-        import * as THREE from './three.js';
 
-        var camera, scene, renderer, material, mesh;
-        var animationTime = 0;
-        var lastUpdate = Date.now();
-
-        init();
-        animate();
-
-        function init() {
-
-            scene = new THREE.Scene();
-
-            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 100);
-            camera.position.z = 30;
-            scene.add(camera);
-
-            const arrowGeometry = new THREE.BufferGeometry();
-            const vertices = new Float32Array([
-                -1.0, -1.0, 0,
-                0.0, -0.6, 0,
-                0.0, 1.2, 0,
-
-                1.0, -1.0, 0,
-                0.0, 1.2, 0,
-                0.0, -0.6, 0
-            ]);
-            arrowGeometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
-            material = new THREE.MeshBasicMaterial({
-                color: 0xffffff
-            });
-
-            mesh = new THREE.Mesh(arrowGeometry, material);
-            scene.add(mesh);
-
-            const canvas = document.querySelector('#c');
-            renderer = new THREE.WebGLRenderer({
-                canvas: canvas,
-                alpha: true
-                //antialias: true
-            });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-
-            document.body.appendChild(renderer.domElement);
-
-        }
-
-        function resizeRendererToDisplaySize(renderer) {
-            const canvas = renderer.domElement;
-            const pixelRatio = window.devicePixelRatio;
-            const width = canvas.clientWidth * pixelRatio | 0;
-            const height = canvas.clientHeight * pixelRatio | 0;
-            const needResize = canvas.width !== width || canvas.height !== height;
-            if (needResize) {
-                renderer.setSize(width, height, false);
-            }
-            return needResize;
-        }
-
-        function animate() {
-
-            requestAnimationFrame(animate);
-
-            var now = Date.now();
-            var deltaTime = Math.min(1 / 15, now - lastUpdate);
-            lastUpdate = now;
-            update(deltaTime);
-            render();
-
-        }
-
-        function render()
-        {
-            if (resizeRendererToDisplaySize(renderer))
-            {
-                const canvas = renderer.domElement;
-                camera.aspect = canvas.clientWidth / canvas.clientHeight;
-                camera.updateProjectionMatrix();
-            }
-
-            renderer.render(scene, camera);
-        }
-
-        function update(deltaTime) {
-            animationTime += deltaTime;
-
-
-        }
-
-        document.addEventListener("mousedown", function (e) {
-            animationTime = 0;
-        });
-    </script>
+    <script type="module" src="./loadingAnimation.js"></script>
 </body>
 </html>
