@@ -97,9 +97,16 @@ function init() {
     const bgTexture = new THREE.TextureLoader().load('res/bg_starfield2x.jpg');
     bgTexture.wrapS = THREE.MirroredRepeatWrapping;
     bgTexture.wrapT = THREE.MirroredRepeatWrapping;
+    bgTexture.mapping = THREE.EquirectangularReflectionMapping;
 
     const invisibleMaterial = new THREE.MeshBasicMaterial({ colorWrite: false });
-    const piecesMaterial = new THREE.MeshBasicMaterial({ color: 0x330000, side: THREE.DoubleSide });
+    const piecesMaterial = new THREE.MeshBasicMaterial({
+        color: 0xdddddd,
+        reflectivity: 1,
+        envMap: bgTexture,
+        side: THREE.DoubleSide,
+        combine: THREE.MultiplyOperation
+    });
 
     // SVGs
 
@@ -212,6 +219,7 @@ function init() {
                         rocks.add(pivot);
                         pivot.position.set(pieceDisplacement.x, pieceDisplacement.y, pieceDisplacement.z);
                         geometry.translate(-pieceDisplacement.x, -pieceDisplacement.y, -pieceDisplacement.z);
+                        geometry.computeVertexNormals();
                         
                         const mesh = new THREE.Mesh(geometry, false ? invisibleMaterial : piecesMaterial);
                         // TODO assign material depending on moving
