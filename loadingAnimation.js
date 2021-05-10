@@ -254,14 +254,15 @@ function init() {
                 color: 0x00ff00
             });
             
-            const circleSegments = 16;
+            const circleSegments = 18;
             const numberOfCircles = 5;
-            const circleRadiusMax = (rocks.boundingBox.max.x - rocks.boundingBox.min.x) * 0.2;
+            const circleRadiusMax = (rocks.boundingBox.max.x - rocks.boundingBox.min.x) * 0.25;
             const circleRadiusMin = circleRadiusMax * 0.3;
             const distanceBetweenCircles = circleRadiusMax * 0.1;
             var rocksCenter = new THREE.Vector3();
             rocks.boundingBox.getCenter(rocksCenter);
             
+            var allCirclePoints = [];
             for(let i = 0; i < numberOfCircles; ++i)
             {
                 const points = [];
@@ -275,6 +276,20 @@ function init() {
                 const wormholeGeometry = new THREE.BufferGeometry().setFromPoints( points );
                 const line = new THREE.Line( wormholeGeometry, wormlinesMaterial );
                 
+                allCirclePoints.push(points);
+                rocks.add(line);
+            }
+            
+            const verticalLineEveryN = 3;
+            for (let i = 0; i < circleSegments; i += verticalLineEveryN)
+            {
+                const points = [];
+                for (let j = 0; j < allCirclePoints.length; ++j)
+                {
+                    points.push(allCirclePoints[j][i]);
+                }
+                const wormholeVerticalGeometry = new THREE.BufferGeometry().setFromPoints( points );
+                const line = new THREE.Line( wormholeVerticalGeometry, wormlinesMaterial );
                 rocks.add(line);
             }
             
