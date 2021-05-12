@@ -9,6 +9,8 @@ import easing from "./lib/easings.js";
 var canvas, stats, camera, scene, renderer, rocks, arrow, trail, gui, guiData;
 var filesWaitingToLoad = 0;
 
+var bgScene, bgCamera;
+
 var trail, trailGeometry, trailPositions = [], trailFrameCount = 64, trailIndex = 0;
 
 var animationTime = 0;
@@ -24,22 +26,6 @@ var moveTowards = function(from, to, delta)
     else {
         return Math.max(to, from - delta);
     }
-}
-
-var computeBoundingBox = function (array)
-{
-    var box = new THREE.Box3();
-    
-    for (let i = 0; i < array.length; i += 3)
-    {
-        box.min.setX(Math.min(box.min.x, array[i]));
-        box.max.setX(Math.max(box.max.x, array[i]));
-        box.min.setY(Math.min(box.min.y, array[i + 1]));
-        box.max.setY(Math.max(box.max.y, array[i + 1]));
-        box.min.setZ(Math.min(box.min.z, array[i + 2]));
-        box.max.setZ(Math.max(box.max.z, array[i + 2]));
-    }
-    return box;
 }
 
 init();
@@ -63,11 +49,24 @@ function init() {
         DEBUG_PLANE: false,
         DEBUG_RESIZABLE_WINDOW: false
     }
+    // rendering
+    
+    canvas = document.querySelector('#c');
+    renderer = new THREE.WebGL1Renderer({
+        canvas: canvas,
+        alpha: true
+        //antialias: true
+    
+    });
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(window.innerWidth, window.innerHeight);
 
     stats = new Stats();
-    document.getElementById('container').appendChild(stats.dom);
+    document.getElementById('stats').appendChild(stats.dom);
+    
+    // Main Scene
     scene = new THREE.Scene();
-
+    
     camera = new THREE.PerspectiveCamera(guiData.cameraFOV, window.innerWidth / window.innerHeight, 1, 1000);
     camera.position.z = guiData.cameraDistanceZ;
     camera.position.y = guiData.cameraStartY;
@@ -84,17 +83,7 @@ function init() {
     arrow = new THREE.Object3D();
     scene.add(arrow);
 
-    // rendering
-
-    canvas = document.querySelector('#c');
-    renderer = new THREE.WebGLRenderer({
-        canvas: canvas,
-        alpha: true
-        //antialias: true
-
-    });
-    renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    
 
     document.body.appendChild(renderer.domElement);
 
@@ -102,15 +91,28 @@ function init() {
     bgTexture.wrapS = THREE.MirroredRepeatWrapping;
     bgTexture.wrapT = THREE.MirroredRepeatWrapping;
     bgTexture.mapping = THREE.EquirectangularReflectionMapping;
+    bgTexture.minFilter = THREE.NearestFilter;
+    //scene.background = bgTexture;
 
     // MATERIALS
+    
     const invisibleMaterial = new THREE.MeshBasicMaterial({ colorWrite: false });
-    const piecesMaterial = new THREE.MeshBasicMaterial({
+    const oldPiecesMaterial = new THREE.MeshBasicMaterial({
         color: 0xdddddd,
         reflectivity: 1,
         envMap: bgTexture,
         side: THREE.DoubleSide,
         combine: THREE.MultiplyOperation
+    });
+    const piecesMaterial = new THREE.ShaderMaterial({
+        side: THREE.DoubleSide,
+        uniforms: {
+            screenRatio: { value: window.innerWidth / window.innerHeight},
+            textureRatio: {value: 1.4145 }, // TODO update this ratio if we change the BG image
+            bgTexture: {value: bgTexture}
+        },
+        vertexShader: document.getElementById( 'vertexShaderPieces' ).textContent,
+        fragmentShader: document.getElementById( 'fragmentShaderPieces' ).textContent
     });
     const wormlinesMaterial = new THREE.LineBasicMaterial({
         color: 0x00ff00
@@ -248,6 +250,7 @@ function init() {
                         rocks.add(pivot);
                         pivot.position.set(pieceDisplacement.x, pieceDisplacement.y, pieceDisplacement.z);
                         geometry.translate(-pieceDisplacement.x, -pieceDisplacement.y, -pieceDisplacement.z);
+                        // TODO make pieces 3D
                         geometry.computeVertexNormals();
                         
                         const mesh = new THREE.Mesh(geometry, false ? invisibleMaterial : piecesMaterial);

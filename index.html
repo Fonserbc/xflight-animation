@@ -7,32 +7,69 @@
             margin: 0;
             height: 100%;
         }
-
-        body {
-            background-color: black;
-            background-image: url("res/bg_starfield2x.jpg");
-            background-size: cover;
-        }
-
-        #logo {
-        }
-
         #c {
             width: 100%;
             height: 100%;
             display: block;
+            background-image: url("res/bg_starfield2x.jpg");
+            background-size: cover;
         }
     </style>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>xflight animation</title>
 </head>
 <body>
-    <div id="container"></div>
-    <div id="logo">
-
-    </div>
+    <div id="stats"><div>
     <canvas id="c"></canvas>
 
     <script type="module" src="./loadingAnimation.js"></script>
+    
+    <script id="vertexShaderPieces" type="x-shader/x-vertex">
+        precision mediump float;
+    
+        varying vec3 vNormal;
+        varying vec2 screenPos;
+    
+        void main(void) {
+            vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+            vNormal = normalMatrix * normal;
+            
+            gl_Position = projectionMatrix * mvPosition;
+            screenPos = gl_Position.xy / gl_Position.w;
+        }
+    </script>
+    <script id="fragmentShaderPieces" type="x-shader/x-fragment">
+        precision mediump float;
+    
+        uniform sampler2D bgTexture;
+        uniform float textureRatio;
+        uniform float screenRatio;
+        varying vec2 screenPos;
+        
+        varying vec3 vNormal;
+        
+        void main(void) {
+            
+            vec2 coord = screenPos;
+            vec3 normal = normalize(vNormal);//normalize(vec3(normalMatrix * vNormal));
+            
+            float ratio = screenRatio / textureRatio;
+            if (ratio >= 1.0)
+            {
+                coord.y *= ratio;
+            }
+            else coord.x /= ratio;
+            
+            coord += vec2(1,1);
+            coord /= 2.0;
+            coord.x += normal.x * 0.2;
+            coord.y += normal.z * 0.2;
+            
+            float shine = normal.z * normal.z * 0.05;
+            vec3 shineColor = vec3(shine*.8, shine, shine*.8);
+            
+            gl_FragColor = vec4(texture2D(bgTexture, coord).rgb + shineColor, 1);//, 1);// + 
+        }
+    </script>
 </body>
 </html>
