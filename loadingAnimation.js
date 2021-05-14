@@ -39,12 +39,14 @@ function init() {
     guiData = {
         spaceshipLogoSize: 1,
         totalAnimationTime: 10,
-        cameraStartY: 5,
-        cameraDistanceZ: 35,
-        cameraEndY: 15,
+        cameraStartY: 25,
+        cameraDistanceZ: 25,
+        cameraEndY: 20,
         cameraFOV: 50,
+        cameraStartLookingAtShipFactor: 0.06,
+        cameraStartLookingAtHeight: 5,
         spaceshipStartY: -10,
-        spaceshipEndY: 15,
+        spaceshipEndY: 20,
         holeSize: 30,
         piecesSpeedFriction: 0.1,
         piecesRotationFriction: 0.03,
@@ -350,7 +352,7 @@ function init() {
             }
             
             const circleSegments = 18;
-            const numberOfCircles = 5;
+            const numberOfCircles = 10;
             const circleRadiusMax = (rocks.boundingBox.max.x - rocks.boundingBox.min.x) * 0.25;
             const circleRadiusMin = circleRadiusMax * 0.3;
             const distanceBetweenCircles = circleRadiusMax * 0.1;
@@ -417,6 +419,8 @@ function createDebugGUI ()
     cameraGUI.add(guiData, "cameraDistanceZ", 0.5, 100).name("Z distance").onChange(function () { camera.position.z = guiData.cameraDistanceZ; });
     cameraGUI.add(guiData, "cameraStartY").name("start Y position").onChange(restart);
     cameraGUI.add(guiData, "cameraEndY").name("end Y position").onChange(restart);
+    cameraGUI.add(guiData, "cameraStartLookingAtShipFactor").name("LookAtShipStartAnim %");
+    cameraGUI.add(guiData, "cameraStartLookingAtHeight").name("Start lookAt height");
     var spaceshipGUI = gui.addFolder("Spaceship");
     spaceshipGUI.add(guiData, "spaceshipStartY").name("start Y position").onChange(restart);
     spaceshipGUI.add(guiData, "spaceshipEndY").name("end Y position").onChange(restart);
@@ -503,7 +507,21 @@ function update(deltaTime) {
     trailGeometry.attributes.position.array[5] = trailPositions[lastTrailIndex].z - 0.1;
     trailGeometry.attributes.position.needsUpdate = true;
     
-    //camera.lookAt(arrow.position);
+    if (animationFactor < guiData.cameraStartLookingAtShipFactor)
+    {
+        camera.lookAt(new THREE.Vector3(0,guiData.cameraStartLookingAtHeight,0));
+    }
+    else {
+        const lookFactor = (animationFactor - guiData.cameraStartLookingAtShipFactor)/(1 - guiData.cameraStartLookingAtShipFactor);
+        var lookAtPoint = new THREE.Vector3(
+            0,
+            THREE.Math.lerp(guiData.cameraStartLookingAtHeight, arrow.position.y, easing.easeInOutCubic(lookFactor)),
+            0
+        );
+        camera.lookAt(lookAtPoint);
+    }
+    
+    arrow.quaternion.copy(camera.quaternion);
     
     for (let i = 0; i < pieces.length; ++i)
     {

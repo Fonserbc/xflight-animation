@@ -75,7 +75,7 @@
             coord.y -= normal.y * 0.2;
             
             float shiningFactor = abs(normal.z);
-            float shine = shiningFactor * shiningFactor * shiningFactor * shiningFactor * -0.1;
+            float shine = shiningFactor * shiningFactor * shiningFactor * shiningFactor * 0.05;
             //vec3 shineColor = vec3(shine, shine, shine);
             
             gl_FragColor = vec4(mix(texture2D(bgTexture, coord).rgb, vec3(1), shine), 1);//, 1);// + 
