@@ -34,7 +34,7 @@ animate();
 
 function init() {
     
-    const DEPTH_PIECES = 10;
+    const DEPTH_PIECES = 5;
 
     guiData = {
         spaceshipLogoSize: 1,
@@ -117,7 +117,12 @@ function init() {
         fragmentShader: document.getElementById( 'fragmentShaderPieces' ).textContent
     });
     const wormlinesMaterial = new THREE.LineBasicMaterial({
-        color: 0x00ff00
+        color: 0x00ff00,
+        linewidth: 3
+    });
+    const outlineMaterial = new THREE.LineBasicMaterial({
+        color: 0xffffff,
+        linewidth: 3
     });
 
     // SVGs
@@ -209,6 +214,7 @@ function init() {
                     geometry.rotateX(Math.PI * -0.5);
                     
                     if (i == containerPathIt) {
+                        
                         // Vertex corrections
                         geometry.computeBoundingBox();
                         //geometry.boundingBox = computeBoundingBox(geometry.attributes.position.array);
@@ -222,6 +228,18 @@ function init() {
                         
                         const mesh = new THREE.Mesh(geometry, invisibleMaterial);
                         rocks.add(mesh);
+                        
+                        // White outline hole
+                        var outlinePositions = [];
+                        for (let x = 12; x < geometry.attributes.position.array.length; ++x) // This is set by hand
+                        {
+                            outlinePositions.push(geometry.attributes.position.array[x]);
+                        }
+                        const outlineGeometry = new THREE.BufferGeometry();
+                        outlineGeometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(outlinePositions), 3) );
+                        console.log(outlineGeometry);
+                        const outlineMesh = new THREE.LineLoop(outlineGeometry, outlineMaterial);
+                        rocks.add(outlineMesh);
                         
                         // This is the triangle that is going to block the bottom side
                         const frontBlocker = new THREE.BufferGeometry();

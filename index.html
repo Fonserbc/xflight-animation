@@ -27,13 +27,13 @@
     <script id="vertexShaderPieces" type="x-shader/x-vertex">
         precision mediump float;
     
-        varying vec3 vNormal;
+        //varying vec3 vNormal;
         varying vec3 vPos;
         varying vec2 screenPos;
     
         void main(void) {
             vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
-            vNormal = normalMatrix * normal;
+            //vNormal = normalMatrix * normal;
             
             gl_Position = projectionMatrix * mvPosition;
             screenPos = gl_Position.xy / gl_Position.w;
@@ -48,7 +48,7 @@
         uniform float screenRatio;
         varying vec2 screenPos;
         
-        varying vec3 vNormal;
+        //varying vec3 vNormal;
         varying vec3 vPos;
         
         void main(void) {
@@ -74,10 +74,11 @@
             coord.x -= normal.x * 0.2;
             coord.y -= normal.y * 0.2;
             
-            float shine = normal.z * normal.z * normal.z * normal.z;
-            vec3 shineColor = vec3(shine*.8, shine, shine*.8) * 0.2;
+            float shiningFactor = abs(normal.z);
+            float shine = shiningFactor * shiningFactor * shiningFactor * shiningFactor * -0.1;
+            //vec3 shineColor = vec3(shine, shine, shine);
             
-            gl_FragColor = vec4(texture2D(bgTexture, coord).rgb + shineColor, 1);//, 1);// + 
+            gl_FragColor = vec4(mix(texture2D(bgTexture, coord).rgb, vec3(1), shine), 1);//, 1);// + 
         }
     </script>
 </body>
