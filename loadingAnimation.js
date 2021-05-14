@@ -51,6 +51,8 @@ function init() {
         holeSize: 30,
         piecesSpeedFriction: 0.7,
         piecesRotationFriction: 0.07,
+        piecesRotationSpeed: 2,
+        piecesSpeed: 100,
         startBreakingTime: 0.1,
         endBreakingTime: 0.4,
         DEBUG_PLANE: false,
@@ -373,12 +375,13 @@ function init() {
                             init: function () {
                                 this.object3D.position.copy(this.originalPosition);
                                 this.object3D.quaternion.identity();
+                                this.rotationAxis.copy(new THREE.Vector3().random().normalize());
                                 
                                 var receivedSpeed = easing.easeInCirc(Math.abs(this.velocity.y));
                                 
                                 
-                                this.rotationSpeed = receivedSpeed * (2 + THREE.MathUtils.lerp(-1, 1, Math.random()));
-                                this.speed = receivedSpeed * (100 + THREE.MathUtils.lerp(-5, 5, Math.random()));
+                                this.rotationSpeed = receivedSpeed * (guiData.piecesRotationSpeed + THREE.MathUtils.lerp(-guiData.piecesRotationSpeed * 0.5, guiData.piecesRotationSpeed * 0.5, Math.random()));
+                                this.speed = receivedSpeed * (guiData.piecesSpeed + THREE.MathUtils.lerp(-guiData.piecesSpeed * 0.1, guiData.piecesSpeed * 0.1, Math.random()));
                                 this.setMoving(false);
                                 
                                 var insideFactor = this.sortedOrder/(pieces.length - 1);
@@ -486,6 +489,8 @@ function createDebugGUI ()
     holeGUI.add(guiData, "startBreakingTime", 0, 1).name("startBreakAnim %").onChange(restart);
     holeGUI.add(guiData, "endBreakingTime", 0, 1).name("endBreakAnim %").onChange(restart);
     var rocksGUI = gui.addFolder("Rocks");
+    rocksGUI.add(guiData, "piecesSpeed").name("translation speed").onChange(restart);
+    rocksGUI.add(guiData, "piecesRotationSpeed", 0, 50).name("rotation speed").onChange(restart);
     rocksGUI.add(guiData, "piecesSpeedFriction", 0, 10).name("translation friction");
     rocksGUI.add(guiData, "piecesRotationFriction", 0, 2).name("rotation friction");
     // TODO rocks rotation and speed GUI
