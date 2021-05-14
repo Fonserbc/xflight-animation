@@ -28,6 +28,7 @@
         precision mediump float;
     
         varying vec3 vNormal;
+        varying vec3 vPos;
         varying vec2 screenPos;
     
         void main(void) {
@@ -36,6 +37,7 @@
             
             gl_Position = projectionMatrix * mvPosition;
             screenPos = gl_Position.xy / gl_Position.w;
+            vPos = mvPosition.xyz;
         }
     </script>
     <script id="fragmentShaderPieces" type="x-shader/x-fragment">
@@ -47,11 +49,18 @@
         varying vec2 screenPos;
         
         varying vec3 vNormal;
+        varying vec3 vPos;
         
         void main(void) {
             
             vec2 coord = screenPos;
-            vec3 normal = normalize(vNormal);//normalize(vec3(normalMatrix * vNormal));
+            
+            #extension GL_OES_standard_derivatives : enable
+            vec3 fdx = vec3(dFdx(vPos.x),dFdx(vPos.y),dFdx(vPos.z));
+            vec3 fdy = vec3(dFdy(vPos.x),dFdy(vPos.y),dFdy(vPos.z));
+            vec3 N = normalize(cross(fdx,fdy));
+            
+            vec3 normal = N;//normalize(vNormal);
             
             float ratio = screenRatio / textureRatio;
             if (ratio >= 1.0)
@@ -62,11 +71,11 @@
             
             coord += vec2(1,1);
             coord /= 2.0;
-            coord.x += normal.x * 0.2;
-            coord.y += normal.z * 0.2;
+            coord.x -= normal.x * 0.2;
+            coord.y -= normal.y * 0.2;
             
-            float shine = normal.z * normal.z * 0.15;
-            vec3 shineColor = vec3(shine*.8, shine, shine*.8);
+            float shine = normal.z * normal.z * normal.z * normal.z;
+            vec3 shineColor = vec3(shine*.8, shine, shine*.8) * 0.2;
             
             gl_FragColor = vec4(texture2D(bgTexture, coord).rgb + shineColor, 1);//, 1);// + 
         }
