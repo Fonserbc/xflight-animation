@@ -6,17 +6,16 @@ import { GUI } from "./lib/dat.gui.js";
 import Stats from "./lib/stats.js";
 import easing from "./lib/easings.js";
 
-var canvas, stats, camera, scene, renderer, rocks, arrow, trail, gui, guiData;
+var canvas, stats, camera, scene, renderer, arrow, trail, gui, guiData;
 var filesWaitingToLoad = 0;
-
-var bgScene, bgCamera;
 
 var trail, trailGeometry, trailPositions = [], trailFrameCount = 64, trailIndex = 0;
 
+var holeOutlineMesh, rocks;
+var pieces = [];
+
 var animationTime = 0;
 var DEBUG_plane;
-
-var pieces = [];
 
 var moveTowards = function(from, to, delta)
 {
@@ -241,8 +240,9 @@ function init() {
                         const outlineGeometry = new THREE.BufferGeometry();
                         outlineGeometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(outlinePositions), 3) );
                         console.log(outlineGeometry);
-                        const outlineMesh = new THREE.LineLoop(outlineGeometry, outlineMaterial);
-                        rocks.add(outlineMesh);
+                        holeOutlineMesh = new THREE.LineLoop(outlineGeometry, outlineMaterial);
+                        rocks.add(holeOutlineMesh);
+                        holeOutlineMesh.visible = false;
                         
                         // This is the triangle that is going to block the bottom side
                         const frontBlocker = new THREE.BufferGeometry();
@@ -315,11 +315,33 @@ function init() {
                         
                         geometry.computeVertexNormals();
                         
-                        const mesh = new THREE.Mesh(geometry, false ? invisibleMaterial : piecesMaterial);
-                        // TODO assign material depending on moving
+                        const mesh = new THREE.Mesh(geometry, invisibleMaterial);
                         pivot.add(mesh);
                         
-                        //console.log(pivot);
+                        // Pieces outlines
+                        const outlines = [];
+                        var outlinePositions = [];
+                        for (let x = 0; x < vertexCount * 3; ++x) // This is set by hand
+                        {
+                            if (x % 3 == 1) outlinePositions.push(geometry.attributes.position.array[x] + 0.5); // for zfighting
+                            else outlinePositions.push(geometry.attributes.position.array[x]);
+                        }
+                        const outlineGeometry = new THREE.BufferGeometry();
+                        outlineGeometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(outlinePositions), 3) );
+                        outlines.push(new THREE.LineLoop(outlineGeometry, outlineMaterial));
+                        pivot.add(outlines[0]);
+                        
+                        // underside outline
+                        outlinePositions = [];
+                        for (let x = 0; x < vertexCount * 3; ++x) // This is set by hand
+                        {
+                            if (x % 3 == 1) outlinePositions.push(geometry.attributes.position.array[x + vertexCount * 3] - 0.5); // for zfighting
+                            else outlinePositions.push(geometry.attributes.position.array[x + vertexCount * 3]);
+                        }
+                        const outlineGeometryUnder = new THREE.BufferGeometry();
+                        outlineGeometryUnder.setAttribute("position", new THREE.BufferAttribute(new Float32Array(outlinePositions), 3) );
+                        outlines.push(new THREE.LineLoop(outlineGeometryUnder, outlineMaterial));
+                        pivot.add(outlines[1]);
                         
                         var vel = pieceDisplacement.clone();
                         vel.y = 45;
@@ -328,11 +350,20 @@ function init() {
                         var piece = {
                             object3D: pivot,
                             originalPosition: pieceDisplacement,
-                            moving: true,
+                            moving: false,
                             rotationAxis: new THREE.Vector3().random().normalize(),
                             rotationSpeed: 0,
                             velocity: vel,
                             speed: 0,
+                            mesh: mesh,
+                            outlines: outlines,
+                            
+                            setMoving: function(m) {
+                                this.moving = m;
+                                this.mesh.material = !m? invisibleMaterial : piecesMaterial;
+                                this.outlines[0].visible = m;
+                                this.outlines[1].visible = m;
+                            },
                             
                             init: function () {
                                 this.object3D.position.copy(this.originalPosition);
@@ -343,6 +374,7 @@ function init() {
                                 
                                 this.rotationSpeed = receivedSpeed * (2 + THREE.MathUtils.lerp(-1, 1, Math.random()));
                                 this.speed = receivedSpeed * (50 + THREE.MathUtils.lerp(-5, 5, Math.random()));
+                                this.setMoving(true);
                             }
                         }
                         piece.init();
@@ -523,11 +555,13 @@ function update(deltaTime) {
     
     arrow.quaternion.copy(camera.quaternion);
     
+    var movingPieces = 0;
     for (let i = 0; i < pieces.length; ++i)
     {
         const p = pieces[i];
         if (p.moving)
         {
+            movingPieces++;
             p.speed = moveTowards(p.speed, 0, deltaTime * guiData.piecesSpeedFriction);
             p.rotationSpeed = moveTowards(p.rotationSpeed, 0, deltaTime * guiData.piecesRotationFriction);
             
@@ -541,6 +575,8 @@ function update(deltaTime) {
             //if (i == 0) console.log(p.object3D.quaternion);
         }
     }
+    
+    holeOutlineMesh.visible = movingPieces == pieces.length;
 }
 
 function restart() {
