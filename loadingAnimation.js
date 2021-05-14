@@ -13,6 +13,7 @@ var trail, trailGeometry, trailPositions = [], trailFrameCount = 64, trailIndex 
 
 var holeOutlineMesh, rocks;
 var pieces = [];
+var sortedPieces = [];
 
 var animationTime = 0;
 var DEBUG_plane;
@@ -42,13 +43,16 @@ function init() {
         cameraDistanceZ: 25,
         cameraEndY: 20,
         cameraFOV: 50,
-        cameraStartLookingAtShipFactor: 0.06,
+        cameraStartLookingAtShipFactor: 0.3,
         cameraStartLookingAtHeight: 5,
         spaceshipStartY: -10,
         spaceshipEndY: 20,
+        spaceshipStartMovingFactor: 0.4,
         holeSize: 30,
-        piecesSpeedFriction: 0.1,
-        piecesRotationFriction: 0.03,
+        piecesSpeedFriction: 0.7,
+        piecesRotationFriction: 0.07,
+        startBreakingTime: 0.1,
+        endBreakingTime: 0.4,
         DEBUG_PLANE: false,
         DEBUG_RESIZABLE_WINDOW: false
     }
@@ -239,7 +243,6 @@ function init() {
                         }
                         const outlineGeometry = new THREE.BufferGeometry();
                         outlineGeometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(outlinePositions), 3) );
-                        console.log(outlineGeometry);
                         holeOutlineMesh = new THREE.LineLoop(outlineGeometry, outlineMaterial);
                         rocks.add(holeOutlineMesh);
                         holeOutlineMesh.visible = false;
@@ -357,6 +360,8 @@ function init() {
                             speed: 0,
                             mesh: mesh,
                             outlines: outlines,
+                            staticTime: 0,
+                            sortedOrder: 0,
                             
                             setMoving: function(m) {
                                 this.moving = m;
@@ -373,16 +378,32 @@ function init() {
                                 
                                 
                                 this.rotationSpeed = receivedSpeed * (2 + THREE.MathUtils.lerp(-1, 1, Math.random()));
-                                this.speed = receivedSpeed * (50 + THREE.MathUtils.lerp(-5, 5, Math.random()));
-                                this.setMoving(true);
+                                this.speed = receivedSpeed * (100 + THREE.MathUtils.lerp(-5, 5, Math.random()));
+                                this.setMoving(false);
+                                
+                                var insideFactor = this.sortedOrder/(pieces.length - 1);
+                                insideFactor = easing.easeOutCirc(insideFactor);
+                                this.staticTime = THREE.MathUtils.lerp(guiData.startBreakingTime, guiData.endBreakingTime, insideFactor) * guiData.totalAnimationTime;
                             }
                         }
-                        piece.init();
                         pieces.push(piece);
                     }
                 }
             }
+            // sort pieces
+            for (let i = 0; i < pieces.length; ++i)
+                sortedPieces.push(i);
             
+            sortedPieces.sort(function(a, b) {
+                return pieces[a].originalPosition.lengthSq() - pieces[b].originalPosition.lengthSq();
+            });
+            for (let i = 0; i < sortedPieces.length; ++i)
+                pieces[sortedPieces[i]].sortedOrder = i;
+                
+            for (let i = 0; i < pieces.length; ++i)
+                pieces[i].init();
+            
+            // Wormhole
             const circleSegments = 18;
             const numberOfCircles = 10;
             const circleRadiusMax = (rocks.boundingBox.max.x - rocks.boundingBox.min.x) * 0.25;
@@ -451,16 +472,19 @@ function createDebugGUI ()
     cameraGUI.add(guiData, "cameraDistanceZ", 0.5, 100).name("Z distance").onChange(function () { camera.position.z = guiData.cameraDistanceZ; });
     cameraGUI.add(guiData, "cameraStartY").name("start Y position").onChange(restart);
     cameraGUI.add(guiData, "cameraEndY").name("end Y position").onChange(restart);
-    cameraGUI.add(guiData, "cameraStartLookingAtShipFactor").name("LookAtShipStartAnim %");
+    cameraGUI.add(guiData, "cameraStartLookingAtShipFactor", 0, 1).name("lookAtShipStartAnim %");
     cameraGUI.add(guiData, "cameraStartLookingAtHeight").name("Start lookAt height");
     var spaceshipGUI = gui.addFolder("Spaceship");
     spaceshipGUI.add(guiData, "spaceshipStartY").name("start Y position").onChange(restart);
     spaceshipGUI.add(guiData, "spaceshipEndY").name("end Y position").onChange(restart);
+    spaceshipGUI.add(guiData, "spaceshipStartMovingFactor", 0, 1).name("startMovingAnim %").onChange(restart);
     var holeGUI = gui.addFolder("Wormhole");
     holeGUI.add(guiData, "holeSize", 0, 100).name("Hole Size").onChange(function () {
         rocks.resizeHole(guiData.holeSize);
         restart();
     });
+    holeGUI.add(guiData, "startBreakingTime", 0, 1).name("startBreakAnim %").onChange(restart);
+    holeGUI.add(guiData, "endBreakingTime", 0, 1).name("endBreakAnim %").onChange(restart);
     var rocksGUI = gui.addFolder("Rocks");
     rocksGUI.add(guiData, "piecesSpeedFriction", 0, 10).name("translation friction");
     rocksGUI.add(guiData, "piecesRotationFriction", 0, 2).name("rotation friction");
@@ -522,8 +546,15 @@ function update(deltaTime) {
 
     const animationFactor = Math.max(0, Math.min(1, animationTime / guiData.totalAnimationTime));
 
-    arrow.position.y = THREE.MathUtils.lerp(guiData.spaceshipStartY, guiData.spaceshipEndY, easing.easeOutExpo(animationFactor));
-    camera.position.y = THREE.MathUtils.lerp(guiData.cameraStartY, guiData.cameraEndY, easing.easeInOutSine(animationFactor));
+    if (animationFactor < guiData.spaceshipStartMovingFactor) {
+        arrow.position.y = guiData.spaceshipStartY;
+        camera.position.y = guiData.cameraStartY;
+    }
+    else {
+        var f = (animationFactor - guiData.spaceshipStartMovingFactor)/(1 - guiData.spaceshipStartMovingFactor);
+        arrow.position.y = THREE.MathUtils.lerp(guiData.spaceshipStartY, guiData.spaceshipEndY, easing.easeOutExpo(f));
+        camera.position.y = THREE.MathUtils.lerp(guiData.cameraStartY, guiData.cameraEndY, easing.easeInOutSine(f));
+    }
     
     // update trail
     trailPositions[trailIndex].copy(arrow.position);
@@ -573,6 +604,10 @@ function update(deltaTime) {
             p.object3D.applyQuaternion(new THREE.Quaternion().setFromAxisAngle(p.rotationAxis, p.rotationSpeed * deltaTime));
                 
             //if (i == 0) console.log(p.object3D.quaternion);
+        }
+        else {
+            p.staticTime -= deltaTime;
+            if (p.staticTime < 0) p.setMoving(true);
         }
     }
     
