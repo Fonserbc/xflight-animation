@@ -65,7 +65,7 @@
             coord.x += normal.x * 0.2;
             coord.y += normal.z * 0.2;
             
-            float shine = normal.z * normal.z * 0.05;
+            float shine = normal.z * normal.z * 0.15;
             vec3 shineColor = vec3(shine*.8, shine, shine*.8);
             
             gl_FragColor = vec4(texture2D(bgTexture, coord).rgb + shineColor, 1);//, 1);// + 

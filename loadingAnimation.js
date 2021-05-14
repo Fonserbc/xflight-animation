@@ -33,6 +33,8 @@ var lastUpdate = Date.now();
 animate();
 
 function init() {
+    
+    const DEPTH_PIECES = 10;
 
     guiData = {
         spaceshipLogoSize: 1,
@@ -105,7 +107,7 @@ function init() {
         combine: THREE.MultiplyOperation
     });
     const piecesMaterial = new THREE.ShaderMaterial({
-        side: THREE.DoubleSide,
+        //side: THREE.DoubleSide,
         uniforms: {
             screenRatio: { value: window.innerWidth / window.innerHeight},
             textureRatio: {value: 1.4145 }, // TODO update this ratio if we change the BG image
@@ -250,7 +252,46 @@ function init() {
                         rocks.add(pivot);
                         pivot.position.set(pieceDisplacement.x, pieceDisplacement.y, pieceDisplacement.z);
                         geometry.translate(-pieceDisplacement.x, -pieceDisplacement.y, -pieceDisplacement.z);
-                        // TODO make pieces 3D
+                        
+                        // Make pieces 3D
+                        var positionAttribute = geometry.getAttribute("position");
+                        const vertexArrayLength = positionAttribute.array.length;
+                        const vertexCount = vertexArrayLength / 3;
+                        var newPositions = new Float32Array(vertexArrayLength * 2);
+                        
+                        for (let j = 0; j < vertexArrayLength; j += 3)
+                        {
+                            newPositions[j] = newPositions[j + vertexArrayLength] = positionAttribute.array[j];
+                            newPositions[j + 1] = positionAttribute.array[j + 1];
+                            newPositions[j + 1 + vertexArrayLength] = positionAttribute.array[j + 1] - DEPTH_PIECES;
+                            newPositions[j + 2] = newPositions[j + 2 + vertexArrayLength] = positionAttribute.array[j + 2];
+                        }
+                        var indices = [];
+                        for (let j = 0; j < geometry.index.count; ++j)
+                        {
+                            indices.push(geometry.index.array[j]);
+                        }
+                        for (let j = 0; j < geometry.index.count; j += 3)
+                        {
+                            indices.push(geometry.index.array[j] + vertexCount);
+                            indices.push(geometry.index.array[j + 2] + vertexCount);
+                            indices.push(geometry.index.array[j + 1] + vertexCount);
+                        }
+                        for (let j = 0; j < vertexCount; ++j)
+                        {
+                            const next = (j+1)%vertexCount;
+                            const down = j + vertexCount;
+                            const downNext = next + vertexCount;
+                            indices.push(j, next, down);
+                            indices.push(down, next, downNext);
+                        }
+                        
+                        geometry.setAttribute("position", new THREE.Float32BufferAttribute(newPositions, 3));
+                        geometry.deleteAttribute("uv");
+                        geometry.deleteAttribute("normal");
+                        geometry.setIndex(indices);
+                        //
+                        
                         geometry.computeVertexNormals();
                         
                         const mesh = new THREE.Mesh(geometry, false ? invisibleMaterial : piecesMaterial);
