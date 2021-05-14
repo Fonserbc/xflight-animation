@@ -233,7 +233,8 @@ function init() {
                         var outlinePositions = [];
                         for (let x = 12; x < geometry.attributes.position.array.length; ++x) // This is set by hand
                         {
-                            outlinePositions.push(geometry.attributes.position.array[x]);
+                            if (x % 3 == 1) outlinePositions.push(geometry.attributes.position.array[x] + 1); // for zfighting
+                            else outlinePositions.push(geometry.attributes.position.array[x]);
                         }
                         const outlineGeometry = new THREE.BufferGeometry();
                         outlineGeometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(outlinePositions), 3) );
