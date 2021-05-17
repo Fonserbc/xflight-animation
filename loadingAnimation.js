@@ -47,14 +47,14 @@ function init() {
         cameraStartLookingAtHeight: 5,
         spaceshipStartY: -10,
         spaceshipEndY: 20,
-        spaceshipStartMovingFactor: 0.4,
+        spaceshipStartMovingFactor: 0.3,
         holeSize: 30,
-        piecesSpeedFriction: 0.7,
-        piecesRotationFriction: 0.07,
-        piecesRotationSpeed: 2,
+        piecesSpeedFriction: 0.41,
+        piecesRotationFriction: 0.112,
+        piecesRotationSpeed: 0.9,
         piecesSpeed: 100,
-        startBreakingTime: 0.1,
-        endBreakingTime: 0.4,
+        startBreakingTime: 0.25,
+        endBreakingTime: 0.25,
         DEBUG_PLANE: false,
         DEBUG_RESIZABLE_WINDOW: false
     }
@@ -96,7 +96,7 @@ function init() {
 
     document.body.appendChild(renderer.domElement);
 
-    const bgTexture = new THREE.TextureLoader().load('res/bg_starfield2x.jpg');
+    const bgTexture = new THREE.TextureLoader().load('res/option2.jpg');
     bgTexture.wrapS = THREE.MirroredRepeatWrapping;
     bgTexture.wrapT = THREE.MirroredRepeatWrapping;
     bgTexture.mapping = THREE.EquirectangularReflectionMapping;
