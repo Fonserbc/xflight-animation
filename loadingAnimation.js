@@ -53,7 +53,7 @@ function init() {
         piecesRotationFriction: 0.112,
         piecesRotationSpeed: 0.9,
         piecesSpeed: 100,
-        startBreakingTime: 0.25,
+        startBreakingTime: 0.05,
         endBreakingTime: 0.25,
         DEBUG_PLANE: false,
         DEBUG_RESIZABLE_WINDOW: false
@@ -364,12 +364,17 @@ function init() {
                             outlines: outlines,
                             staticTime: 0,
                             sortedOrder: 0,
+                            showingOutline: false,
                             
                             setMoving: function(m) {
                                 this.moving = m;
+                            },
+                            
+                            showOutline: function(m) {
                                 this.mesh.material = !m? invisibleMaterial : piecesMaterial;
                                 this.outlines[0].visible = m;
                                 this.outlines[1].visible = m;
+                                this.showingOutline = m;
                             },
                             
                             init: function () {
@@ -383,6 +388,7 @@ function init() {
                                 this.rotationSpeed = receivedSpeed * (guiData.piecesRotationSpeed + THREE.MathUtils.lerp(-guiData.piecesRotationSpeed * 0.5, guiData.piecesRotationSpeed * 0.5, Math.random()));
                                 this.speed = receivedSpeed * (guiData.piecesSpeed + THREE.MathUtils.lerp(-guiData.piecesSpeed * 0.1, guiData.piecesSpeed * 0.1, Math.random()));
                                 this.setMoving(false);
+                                this.showOutline(false);
                                 
                                 var insideFactor = this.sortedOrder/(pieces.length - 1);
                                 insideFactor = easing.easeOutCirc(insideFactor);
@@ -591,6 +597,7 @@ function update(deltaTime) {
     
     arrow.quaternion.copy(camera.quaternion);
     
+    var visiblePieces = 0;
     var movingPieces = 0;
     for (let i = 0; i < pieces.length; ++i)
     {
@@ -610,13 +617,22 @@ function update(deltaTime) {
                 
             //if (i == 0) console.log(p.object3D.quaternion);
         }
-        else {
+        else if (!p.showingOutline) {
             p.staticTime -= deltaTime;
-            if (p.staticTime < 0) p.setMoving(true);
+            if (p.staticTime < 0) p.showOutline(true);
         }
+        else visiblePieces++;
     }
     
-    holeOutlineMesh.visible = movingPieces == pieces.length;
+    var allPiecesOutlined = visiblePieces == pieces.length;
+    if (allPiecesOutlined)
+    {
+        for (let i = 0; i < pieces.length; ++i)
+        {
+            pieces[i].setMoving(true);
+        }
+    }
+    holeOutlineMesh.visible = allPiecesOutlined || movingPieces == pieces.length;
 }
 
 function restart() {
