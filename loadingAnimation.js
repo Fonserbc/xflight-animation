@@ -99,7 +99,7 @@ function init() {
     const bgTexture = new THREE.TextureLoader().load('res/option2.jpg');
     const cubeTextureLoader = new THREE.CubeTextureLoader();
     cubeTextureLoader.setPath("res/");
-    var envBGTexture = cubeTextureLoader.load(['cube_side.jpg', 'cube_side.jpg', 'cube_side.jpg', 'cube_side.jpg', 'cube_side.jpg', 'cube_side.jpg']);
+    var envBGTexture = cubeTextureLoader.load(['skybox-square.jpg', 'skybox-square.jpg', 'skybox-square.jpg', 'skybox-square.jpg', 'skybox-square.jpg', 'skybox-square.jpg']);
     scene.background = envBGTexture;
     
     bgTexture.wrapS = THREE.MirroredRepeatWrapping;
@@ -290,14 +290,17 @@ function init() {
                         var positionAttribute = geometry.getAttribute("position");
                         const vertexArrayLength = positionAttribute.array.length;
                         const vertexCount = vertexArrayLength / 3;
-                        var newPositions = new Float32Array(vertexArrayLength * 2);
+                        var newPositions = new Float32Array(vertexArrayLength * 4);
                         
                         for (let j = 0; j < vertexArrayLength; j += 3)
                         {
-                            newPositions[j] = newPositions[j + vertexArrayLength] = positionAttribute.array[j];
-                            newPositions[j + 1] = positionAttribute.array[j + 1];
-                            newPositions[j + 1 + vertexArrayLength] = positionAttribute.array[j + 1] - DEPTH_PIECES;
-                            newPositions[j + 2] = newPositions[j + 2 + vertexArrayLength] = positionAttribute.array[j + 2];
+                            // X is equal
+                            newPositions[j] = newPositions[j + vertexArrayLength] = newPositions[j + vertexArrayLength * 2] = newPositions[j + vertexArrayLength * 3] = positionAttribute.array[j];
+                            // Z is equal
+                            newPositions[j + 2] = newPositions[j + 2 + vertexArrayLength] = newPositions[j + 2 + vertexArrayLength * 2] = newPositions[j + 2 + vertexArrayLength * 3] = positionAttribute.array[j + 2];
+                            // Y is not
+                            newPositions[j + 1] = newPositions[j + 1 + vertexArrayLength] = positionAttribute.array[j + 1];
+                            newPositions[j + 1 + vertexArrayLength * 2] = newPositions[j + 1 + vertexArrayLength * 3] = positionAttribute.array[j + 1] - DEPTH_PIECES;
                         }
                         var indices = [];
                         for (let j = 0; j < geometry.index.count; ++j)
@@ -306,15 +309,15 @@ function init() {
                         }
                         for (let j = 0; j < geometry.index.count; j += 3)
                         {
-                            indices.push(geometry.index.array[j] + vertexCount);
-                            indices.push(geometry.index.array[j + 2] + vertexCount);
-                            indices.push(geometry.index.array[j + 1] + vertexCount);
+                            indices.push(geometry.index.array[j] + vertexCount * 3);
+                            indices.push(geometry.index.array[j + 2] + vertexCount * 3);
+                            indices.push(geometry.index.array[j + 1] + vertexCount * 3);
                         }
                         for (let j = 0; j < vertexCount; ++j)
                         {
-                            const next = (j+1)%vertexCount;
-                            const down = j + vertexCount;
-                            const downNext = next + vertexCount;
+                            const next = (j+1)%vertexCount + vertexCount;
+                            const down = j + vertexCount * 2;
+                            const downNext = next + vertexCount * 2;
                             indices.push(j, next, down);
                             indices.push(down, next, downNext);
                         }
@@ -347,8 +350,8 @@ function init() {
                         outlinePositions = [];
                         for (let x = 0; x < vertexCount * 3; ++x) // This is set by hand
                         {
-                            if (x % 3 == 1) outlinePositions.push(geometry.attributes.position.array[x + vertexCount * 3] - 0.5); // for zfighting
-                            else outlinePositions.push(geometry.attributes.position.array[x + vertexCount * 3]);
+                            if (x % 3 == 1) outlinePositions.push(geometry.attributes.position.array[x + vertexCount * 2 * 3] - 0.5); // for zfighting
+                            else outlinePositions.push(geometry.attributes.position.array[x + vertexCount * 2 * 3]);
                         }
                         const outlineGeometryUnder = new THREE.BufferGeometry();
                         outlineGeometryUnder.setAttribute("position", new THREE.BufferAttribute(new Float32Array(outlinePositions), 3) );
