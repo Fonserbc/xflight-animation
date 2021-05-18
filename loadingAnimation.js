@@ -97,6 +97,11 @@ function init() {
     document.body.appendChild(renderer.domElement);
 
     const bgTexture = new THREE.TextureLoader().load('res/option2.jpg');
+    const cubeTextureLoader = new THREE.CubeTextureLoader();
+    cubeTextureLoader.setPath("res/");
+    var envBGTexture = cubeTextureLoader.load(['cube_side.jpg', 'cube_side.jpg', 'cube_side.jpg', 'cube_side.jpg', 'cube_side.jpg', 'cube_side.jpg']);
+    scene.background = envBGTexture;
+    
     bgTexture.wrapS = THREE.MirroredRepeatWrapping;
     bgTexture.wrapT = THREE.MirroredRepeatWrapping;
     bgTexture.mapping = THREE.EquirectangularReflectionMapping;
