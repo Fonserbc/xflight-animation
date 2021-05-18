@@ -60,7 +60,7 @@
             vec3 fdy = vec3(dFdy(vPos.x),dFdy(vPos.y),dFdy(vPos.z));
             vec3 N = normalize(cross(fdx,fdy));
             
-            vec3 normal = N;//normalize(vNormal);
+            vec3 normal = N;//normalize(vNormal);//N;//normalize(vNormal);
             
             float ratio = screenRatio / textureRatio;
             if (ratio >= 1.0)

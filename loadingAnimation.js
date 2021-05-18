@@ -34,17 +34,18 @@ animate();
 
 function init() {
     
-    const DEPTH_PIECES = 5;
+    const DEPTH_PIECES = 3; // 3
 
     guiData = {
         spaceshipLogoSize: 1,
         totalAnimationTime: 10,
-        cameraStartY: 25,
+        cameraStartY: 7,
         cameraDistanceZ: 25,
         cameraEndY: 20,
         cameraFOV: 50,
         cameraStartLookingAtShipFactor: 0.3,
         cameraStartLookingAtHeight: 5,
+        cameraDoTilt: false,
         spaceshipStartY: -10,
         spaceshipEndY: 20,
         spaceshipStartMovingFactor: 0.3,
@@ -100,7 +101,7 @@ function init() {
     const cubeTextureLoader = new THREE.CubeTextureLoader();
     cubeTextureLoader.setPath("res/");
     var envBGTexture = cubeTextureLoader.load(['skybox-square.jpg', 'skybox-square.jpg', 'skybox-square.jpg', 'skybox-square.jpg', 'skybox-square.jpg', 'skybox-square.jpg']);
-    scene.background = envBGTexture;
+    //scene.background = envBGTexture;
     
     bgTexture.wrapS = THREE.MirroredRepeatWrapping;
     bgTexture.wrapT = THREE.MirroredRepeatWrapping;
@@ -111,11 +112,9 @@ function init() {
     
     const invisibleMaterial = new THREE.MeshBasicMaterial({ colorWrite: false });
     const oldPiecesMaterial = new THREE.MeshBasicMaterial({
-        color: 0xdddddd,
+        color: 0xffffff,
         reflectivity: 1,
-        envMap: bgTexture,
-        side: THREE.DoubleSide,
-        combine: THREE.MultiplyOperation
+        envMap: envBGTexture
     });
     const piecesMaterial = new THREE.ShaderMaterial({
         //side: THREE.DoubleSide,
@@ -186,7 +185,6 @@ function init() {
             // trail
             while (trailIndex < trailFrameCount)
             {
-                
                 trailPositions.push(arrow.position.clone());
                 trailIndex++;
             }
@@ -291,6 +289,7 @@ function init() {
                         const vertexArrayLength = positionAttribute.array.length;
                         const vertexCount = vertexArrayLength / 3;
                         var newPositions = new Float32Array(vertexArrayLength * 4);
+                        var newNormals = new Float32Array(vertexArrayLength * 4);
                         
                         for (let j = 0; j < vertexArrayLength; j += 3)
                         {
@@ -301,6 +300,23 @@ function init() {
                             // Y is not
                             newPositions[j + 1] = newPositions[j + 1 + vertexArrayLength] = positionAttribute.array[j + 1];
                             newPositions[j + 1 + vertexArrayLength * 2] = newPositions[j + 1 + vertexArrayLength * 3] = positionAttribute.array[j + 1] - DEPTH_PIECES;
+                            
+                            newNormals[j] = newNormals[j + vertexArrayLength * 3] = 0;
+                            newNormals[j + 1] = 1;
+                            newNormals[j + 1 + vertexArrayLength * 3] = -1;
+                            newNormals[j + 2] = newNormals[j + 2 + vertexArrayLength * 3] = 0;
+                            
+                            //var delta = new THREE.Vector2();
+                            //delta.setX(positionAttribute.array[(j + 3) % vertexArrayLength] - positionAttribute.array[j]);
+                            //delta.setY(positionAttribute.array[(j + 2 + 3) % vertexArrayLength] - positionAttribute.array[j + 2]);
+                            
+                            //var n = new THREE.Vector2(-delta.y, delta.x);
+                            var n = new THREE.Vector2(positionAttribute.array[j], positionAttribute.array[j + 2]);
+                            n.normalize();
+                            
+                            newNormals[j + vertexArrayLength] = newNormals[j + vertexArrayLength * 2] = n.x;
+                            newNormals[j + 1 + vertexArrayLength] = newNormals[j + 1 + vertexArrayLength * 2] = 0;
+                            newNormals[j + 2 + vertexArrayLength] = newNormals[j + 2 + vertexArrayLength * 2] = n.y;
                         }
                         var indices = [];
                         for (let j = 0; j < geometry.index.count; ++j)
@@ -323,8 +339,9 @@ function init() {
                         }
                         
                         geometry.setAttribute("position", new THREE.Float32BufferAttribute(newPositions, 3));
+                        geometry.setAttribute("normal", new THREE.Float32BufferAttribute(newNormals, 3));
+                        //geometry.deleteAttribute("normal");
                         geometry.deleteAttribute("uv");
-                        geometry.deleteAttribute("normal");
                         geometry.setIndex(indices);
                         //
                         
@@ -491,6 +508,7 @@ function createDebugGUI ()
     cameraGUI.add(guiData, "cameraDistanceZ", 0.5, 100).name("Z distance").onChange(function () { camera.position.z = guiData.cameraDistanceZ; });
     cameraGUI.add(guiData, "cameraStartY").name("start Y position").onChange(restart);
     cameraGUI.add(guiData, "cameraEndY").name("end Y position").onChange(restart);
+    cameraGUI.add(guiData, "cameraDoTilt").name("tilt camera");
     cameraGUI.add(guiData, "cameraStartLookingAtShipFactor", 0, 1).name("lookAtShipStartAnim %");
     cameraGUI.add(guiData, "cameraStartLookingAtHeight").name("Start lookAt height");
     var spaceshipGUI = gui.addFolder("Spaceship");
@@ -591,18 +609,23 @@ function update(deltaTime) {
     trailGeometry.attributes.position.array[5] = trailPositions[lastTrailIndex].z - 0.1;
     trailGeometry.attributes.position.needsUpdate = true;
     
-    if (animationFactor < guiData.cameraStartLookingAtShipFactor)
-    {
-        camera.lookAt(new THREE.Vector3(0,guiData.cameraStartLookingAtHeight,0));
+    if (guiData.cameraDoTilt) {
+        if (animationFactor < guiData.cameraStartLookingAtShipFactor)
+        {
+            camera.lookAt(new THREE.Vector3(0,guiData.cameraStartLookingAtHeight,0));
+        }
+        else {
+            const lookFactor = (animationFactor - guiData.cameraStartLookingAtShipFactor)/(1 - guiData.cameraStartLookingAtShipFactor);
+            var lookAtPoint = new THREE.Vector3(
+                0,
+                THREE.Math.lerp(guiData.cameraStartLookingAtHeight, arrow.position.y, easing.easeInOutCubic(lookFactor)),
+                0
+            );
+            camera.lookAt(lookAtPoint);
+        }
     }
     else {
-        const lookFactor = (animationFactor - guiData.cameraStartLookingAtShipFactor)/(1 - guiData.cameraStartLookingAtShipFactor);
-        var lookAtPoint = new THREE.Vector3(
-            0,
-            THREE.Math.lerp(guiData.cameraStartLookingAtHeight, arrow.position.y, easing.easeInOutCubic(lookFactor)),
-            0
-        );
-        camera.lookAt(lookAtPoint);
+        camera.quaternion.identity();
     }
     
     arrow.quaternion.copy(camera.quaternion);
