@@ -106,7 +106,6 @@ function init() {
     bgTexture.wrapT = THREE.MirroredRepeatWrapping;
     bgTexture.mapping = THREE.EquirectangularReflectionMapping;
     bgTexture.minFilter = THREE.NearestFilter;
-    //scene.background = bgTexture;
 
     // MATERIALS
     
@@ -136,6 +135,7 @@ function init() {
         color: 0xffffff,
         linewidth: 3
     });
+    const debugMaterial = new THREE.MeshBasicMaterial({color: 0xff00ff});
 
     // SVGs
 
@@ -258,10 +258,12 @@ function init() {
                         const frontBlocker = new THREE.BufferGeometry();
                         const vertices = new Float32Array([
                             geometry.boundingBox.min.x, geometry.boundingBox.min.y, geometry.boundingBox.max.z,
-                            (geometry.boundingBox.min.x + geometry.boundingBox.max.x) * 0.5, geometry.boundingBox.min.y - 1000, geometry.boundingBox.max.z,
+                            geometry.boundingBox.min.x, geometry.boundingBox.min.y - 1000, geometry.boundingBox.max.z,
+                            geometry.boundingBox.max.x, geometry.boundingBox.min.y - 1000, geometry.boundingBox.max.z,
                             geometry.boundingBox.max.x, geometry.boundingBox.min.y, geometry.boundingBox.max.z
                         ]);
                         frontBlocker.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+                        frontBlocker.setIndex([0,1,3,1,2,3]);
                         rocks.add(new THREE.Mesh(frontBlocker, invisibleMaterial));
                         
                         const backBlocker = new THREE.BufferGeometry();
