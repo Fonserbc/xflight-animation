@@ -10,6 +10,7 @@ var canvas, stats, camera, scene, renderer, arrow, trail, gui, guiData;
 var filesWaitingToLoad = 0;
 
 var trail, trailGeometry, trailPositions = [], trailFrameCount = 64, trailIndex = 0;
+var logoPivot, logoMaterials = [];
 
 var holeOutlineMesh, rocks;
 var pieces = [];
@@ -49,7 +50,7 @@ function init() {
         cameraDoTilt: false,
         spaceshipStartY: -10,
         spaceshipEndY: 20,
-        spaceshipStartMovingFactor: 0.3,
+        spaceshipStartMovingFactor: 0.25,
         holeSize: 30,
         piecesSpeedFriction: 0.41,
         piecesRotationFriction: 0.112,
@@ -58,6 +59,8 @@ function init() {
         piecesVerticalMovementFactor: 96,
         startBreakingTime: 0.05,
         endBreakingTime: 0.25,
+        logoFadeinStart: 0.3,
+        logoFadeinEnd: 0.8,
         DEBUG_PLANE: false,
         DEBUG_RESIZABLE_WINDOW: false
     }
@@ -66,8 +69,8 @@ function init() {
     canvas = document.querySelector('#c');
     renderer = new THREE.WebGL1Renderer({
         canvas: canvas,
-        alpha: true
-        //antialias: true
+        alpha: true,
+        antialias: true
     
     });
     renderer.setPixelRatio(window.devicePixelRatio);
@@ -129,7 +132,7 @@ function init() {
         fragmentShader: document.getElementById( 'fragmentShaderPieces' ).textContent
     });
     const wormlinesMaterial = new THREE.LineBasicMaterial({
-        color: 0x00ff00,
+        color: 0x49FF5E,
         linewidth: 3
     });
     const outlineMaterial = new THREE.LineBasicMaterial({
@@ -137,6 +140,10 @@ function init() {
         linewidth: 3
     });
     const debugMaterial = new THREE.MeshBasicMaterial({color: 0xff00ff});
+    
+    logoPivot = new THREE.Object3D();
+    logoPivot.position.y = guiData.spaceshipEndY;
+    scene.add(logoPivot);
 
     // SVGs
 
@@ -178,6 +185,7 @@ function init() {
                 var size = s / (arrow.extents.y.max - arrow.extents.y.min);
                 arrow.meshObject.scale.set(size, size, size);
                 arrow.meshObject.position.set((arrow.extents.x.max - arrow.extents.x.min) * 0.5 * size, (arrow.extents.y.max - arrow.extents.y.min) * 0.5 * size, 0);
+                logoPivot.scale.set(s,s,s);
             }
             arrow.meshObject = new THREE.Mesh(geometry, material);
             arrow.add(arrow.meshObject);
@@ -547,6 +555,67 @@ function init() {
         }
     );
     filesWaitingToLoad++;
+    loader.load("res/full-logo.svg", function (data) {
+        
+        const paths = data.paths;
+        const group = new THREE.Group();
+        var scale = 0.025;
+        group.scale.multiplyScalar( scale );
+        var logoSideSize = 80 * scale;
+        group.position.x = -logoSideSize;
+        group.position.z = -1;
+        group.position.y = logoSideSize + 1.2 * scale;//guiData.spaceshipEndY
+        group.scale.y *= - 1;
+
+        for ( let i = 0; i < paths.length; i ++ ) {
+            const path = paths[ i ];
+            const fillColor = path.userData.style.fill;
+            
+
+            if (fillColor !== undefined && fillColor !== 'none') {
+                const material = new THREE.MeshBasicMaterial( {
+                    color: new THREE.Color().setStyle( fillColor ),
+                    side: THREE.DoubleSide,
+                    depthWrite: false
+                });
+                logoMaterials.push(material);
+                const shapes = SVGLoader.createShapes( path );
+                for ( let j = 0; j < shapes.length; j ++ ) {
+                    if (i == 2 && j == 31) continue; // Arrow
+                    const shape = shapes[ j ];
+                    const geometry = new THREE.ShapeGeometry( shape );
+                    //console.log(geometry.attributes.position.array.length, j);
+                    const mesh = new THREE.Mesh( geometry, material );
+                    group.add( mesh );
+                }
+            }
+            
+            const strokeColor = path.userData.style.stroke;
+            if (strokeColor !== undefined && strokeColor !== 'none') {
+                const strokeMaterial = new THREE.MeshBasicMaterial( {
+                    color: new THREE.Color().setStyle( strokeColor ),
+                    side: THREE.DoubleSide,
+                    depthWrite: false,
+                });
+                logoMaterials.push(strokeMaterial);
+    
+                for ( let j = 0, jl = path.subPaths.length; j < jl; j ++ ) {
+                    const subPath = path.subPaths[ j ];
+                    const geometry = SVGLoader.pointsToStroke( subPath.getPoints(), path.userData.style );
+    
+                    if ( geometry ) {
+                        const mesh = new THREE.Mesh( geometry, strokeMaterial );
+                        group.add( mesh );
+                    }
+                }
+            }
+        }
+        
+        logoPivot.add(group);
+        
+        filesWaitingToLoad--;
+    });
+    filesWaitingToLoad++;
 }
 
 function createDebugGUI ()
@@ -557,7 +626,7 @@ function createDebugGUI ()
 
     // GUI
 
-    gui.add(guiData, "spaceshipLogoSize", 0.001, 20).name("Spaceship-Logo Size").onChange(function () { arrow.resizeArrow(guiData.spaceshipLogoSize); });
+    gui.add(guiData, "spaceshipLogoSize", 0.001, 20).name("Spaceship&Logo Size").onChange(function () { arrow.resizeArrow(guiData.spaceshipLogoSize); });
     gui.add(guiData, "totalAnimationTime", 1, 40).name("Animation Time").onChange(restart);
     var cameraGUI = gui.addFolder("Camera");
     cameraGUI.add(guiData, "cameraFOV", 10, 90).name("Field of View").onChange(function () { camera.fov = guiData.cameraFOV; camera.updateProjectionMatrix(); });
@@ -584,7 +653,9 @@ function createDebugGUI ()
     rocksGUI.add(guiData, "piecesSpeedFriction", 0, 10).name("translation friction");
     rocksGUI.add(guiData, "piecesRotationFriction", 0, 2).name("rotation friction");
     rocksGUI.add(guiData, "piecesVerticalMovementFactor", 0, 500).name("vertical movement amount").onChange(restart);
-    // TODO rocks rotation and speed GUI
+    var logoGUI = gui.addFolder("Logo");
+    logoGUI.add(guiData, "logoFadeinStart", 0, 1).name("fadein start %");
+    logoGUI.add(guiData, "logoFadeinEnd", 0, 1).name("fadein start %");
     
     
     var debugGUI = gui.addFolder("DEBUG");
@@ -596,6 +667,17 @@ function createDebugGUI ()
     });
 
     // GUI
+}
+
+function setLogoTransparency(f)
+{
+    logoPivot.visible = f != 0;
+    for (let i = 0; i < logoMaterials.length; ++i)
+    {
+        const m = logoMaterials[i];
+        m.transparent = f < 1;
+        m.opacity = f;
+    }
 }
 
 
@@ -648,7 +730,7 @@ function update(deltaTime) {
     }
     else {
         var f = (animationFactor - guiData.spaceshipStartMovingFactor)/(1 - guiData.spaceshipStartMovingFactor);
-        arrow.position.y = THREE.MathUtils.lerp(guiData.spaceshipStartY, guiData.spaceshipEndY, easing.easeOutExpo(f));
+        arrow.position.y = THREE.MathUtils.lerp(guiData.spaceshipStartY, guiData.spaceshipEndY, easing.easeOutCubic(f));
         camera.position.y = THREE.MathUtils.lerp(guiData.cameraStartY, guiData.cameraEndY, easing.easeInOutSine(f));
     }
     
@@ -728,6 +810,17 @@ function update(deltaTime) {
         }
     }
     holeOutlineMesh.visible = allPiecesOutlined || movingPieces == pieces.length;
+    
+    // logo
+    if (animationFactor < guiData.logoFadeinStart) {
+        setLogoTransparency(0);
+    }
+    else if (animationFactor < guiData.logoFadeinEnd) {
+        setLogoTransparency(easing.easeInQuad((animationFactor - guiData.logoFadeinStart)/(guiData.logoFadeinEnd - guiData.logoFadeinStart)));
+    }
+    else {
+        setLogoTransparency(1);
+    }
 }
 
 function restart() {
@@ -746,6 +839,8 @@ function restart() {
         trailIndex++;
     }
     trailIndex = 0;
+    
+    logoPivot.position.y = guiData.spaceshipEndY;
 }
 
 canvas.addEventListener("mousedown", restart);
