@@ -10,7 +10,7 @@ var canvas, stats, camera, scene, renderer, arrow, trail, gui, guiData;
 var filesWaitingToLoad = 0;
 
 var trail, trailGeometry, trailPositions = [], trailFrameCount = 64, trailIndex = 0;
-var logoPivot, logoMaterials = [];
+var logoPivot, logoGroup, logoMaterials = [];
 
 var holeOutlineMesh, rocks;
 var pieces = [];
@@ -76,8 +76,8 @@ function init() {
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
 
-    //stats = new Stats();
-    //document.getElementById('stats').appendChild(stats.dom);
+    stats = new Stats();
+    document.getElementById('stats').appendChild(stats.dom);
     
     // Main Scene
     scene = new THREE.Scene();
@@ -105,7 +105,7 @@ function init() {
     const bgTexture = new THREE.TextureLoader().load('res/option2.jpg');
     const cubeTextureLoader = new THREE.CubeTextureLoader();
     cubeTextureLoader.setPath("res/");
-    var envBGTexture = cubeTextureLoader.load(['skybox-square.jpg', 'skybox-square.jpg', 'skybox-square.jpg', 'skybox-square.jpg', 'skybox-square.jpg', 'skybox-square.jpg']);
+    //var envBGTexture = cubeTextureLoader.load(['skybox-square.jpg', 'skybox-square.jpg', 'skybox-square.jpg', 'skybox-square.jpg', 'skybox-square.jpg', 'skybox-square.jpg']);
     //scene.background = envBGTexture;
     
     bgTexture.wrapS = THREE.MirroredRepeatWrapping;
@@ -116,11 +116,11 @@ function init() {
     // MATERIALS
     
     const invisibleMaterial = new THREE.MeshBasicMaterial({ colorWrite: false });
-    const oldPiecesMaterial = new THREE.MeshBasicMaterial({
-        color: 0xffffff,
-        reflectivity: 1,
-        envMap: envBGTexture
-    });
+    //const oldPiecesMaterial = new THREE.MeshBasicMaterial({
+    //    color: 0xffffff,
+    //    reflectivity: 1,
+    //    envMap: envBGTexture
+    //});
     const piecesMaterial = new THREE.ShaderMaterial({
         //side: THREE.DoubleSide,
         uniforms: {
@@ -129,7 +129,8 @@ function init() {
             bgTexture: {value: bgTexture}
         },
         vertexShader: document.getElementById( 'vertexShaderPieces' ).textContent,
-        fragmentShader: document.getElementById( 'fragmentShaderPieces' ).textContent
+        fragmentShader: document.getElementById( 'fragmentShaderPieces' ).textContent,
+        extensions: {derivatives: true}
     });
     const wormlinesMaterial = new THREE.LineBasicMaterial({
         color: 0x49FF5E,
@@ -566,12 +567,24 @@ function init() {
         group.position.z = -1;
         group.position.y = logoSideSize + 1.2 * scale;//guiData.spaceshipEndY
         group.scale.y *= - 1;
+        
+        const alwaysVisibleGroup = new THREE.Group();
+        alwaysVisibleGroup.scale.copy(group.scale);
+        alwaysVisibleGroup.position.copy(group.position);
+        
+        const starMaterial = new THREE.MeshBasicMaterial( {
+            color: 0xffffff,
+            side: THREE.DoubleSide,
+            depthWrite: false
+        });
 
         for ( let i = 0; i < paths.length; i ++ ) {
             const path = paths[ i ];
             const fillColor = path.userData.style.fill;
             
-
+            console.log(i, fillColor);
+            //if (i == 0) continue;
+            
             if (fillColor !== undefined && fillColor !== 'none') {
                 const material = new THREE.MeshBasicMaterial( {
                     color: new THREE.Color().setStyle( fillColor ),
@@ -584,9 +597,18 @@ function init() {
                     if (i == 2 && j == 31) continue; // Arrow
                     const shape = shapes[ j ];
                     const geometry = new THREE.ShapeGeometry( shape );
-                    //console.log(geometry.attributes.position.array.length, j);
-                    const mesh = new THREE.Mesh( geometry, material );
-                    group.add( mesh );
+                    console.log(j, geometry.attributes.position.array.length);
+                    
+                    if (i == 2 && j < 23 && false) { // stars
+                        const mesh = new THREE.Mesh(geometry, starMaterial);
+                        alwaysVisibleGroup.add(mesh);
+                        mesh.position.z = THREE.MathUtils.lerp(-500, 0, Math.random());
+                        //console.log(THREE.MathUtils.lerp(-10, 0, Math.random()), mesh.position.z);
+                    }
+                    else {
+                        const mesh = new THREE.Mesh( geometry, material );
+                        group.add( mesh );
+                    }
                 }
             }
             
@@ -612,6 +634,8 @@ function init() {
         }
         
         logoPivot.add(group);
+        logoPivot.add(alwaysVisibleGroup);
+        logoGroup = group;
         
         filesWaitingToLoad--;
     });
@@ -673,7 +697,7 @@ function createDebugGUI ()
 
 function setLogoTransparency(f)
 {
-    logoPivot.visible = f != 0;
+    logoGroup.visible = f != 0;
     for (let i = 0; i < logoMaterials.length; ++i)
     {
         const m = logoMaterials[i];
@@ -707,7 +731,7 @@ function animate() {
     {
         update(deltaTime);
         render();
-        //stats.update();
+        stats.update();
     }
 }
 
