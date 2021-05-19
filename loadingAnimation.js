@@ -52,8 +52,8 @@ function init() {
         holeSize: 30,
         piecesSpeedFriction: 0.41,
         piecesRotationFriction: 0.112,
-        piecesRotationSpeed: 0.9,
-        piecesSpeed: 100,
+        piecesRotationSpeed: 5,
+        piecesSpeed: 250,
         startBreakingTime: 0.05,
         endBreakingTime: 0.25,
         DEBUG_PLANE: false,
@@ -375,9 +375,7 @@ function init() {
                         outlines.push(new THREE.LineLoop(outlineGeometryUnder, outlineMaterial));
                         pivot.add(outlines[1]);
                         
-                        var vel = pieceDisplacement.clone();
-                        vel.y = 45;
-                        vel.normalize();
+                        
                         
                         var piece = {
                             object3D: pivot,
@@ -385,7 +383,7 @@ function init() {
                             moving: false,
                             rotationAxis: new THREE.Vector3().random().normalize(),
                             rotationSpeed: 0,
-                            velocity: vel,
+                            velocity: new THREE.Vector3(),
                             speed: 0,
                             mesh: mesh,
                             outlines: outlines,
@@ -409,8 +407,12 @@ function init() {
                                 this.object3D.quaternion.identity();
                                 this.rotationAxis.copy(new THREE.Vector3().random().normalize());
                                 
-                                var receivedSpeed = easing.easeInCirc(Math.abs(this.velocity.y));
                                 
+                                this.velocity.copy(this.originalPosition);
+                                this.velocity.setY(45);
+                                this.velocity.normalize();
+                                
+                                var receivedSpeed = easing.easeInCirc(Math.abs(this.velocity.y));
                                 
                                 this.rotationSpeed = receivedSpeed * (guiData.piecesRotationSpeed + THREE.MathUtils.lerp(-guiData.piecesRotationSpeed * 0.5, guiData.piecesRotationSpeed * 0.5, Math.random()));
                                 this.speed = receivedSpeed * (guiData.piecesSpeed + THREE.MathUtils.lerp(-guiData.piecesSpeed * 0.1, guiData.piecesSpeed * 0.1, Math.random()));
@@ -422,6 +424,7 @@ function init() {
                                 this.staticTime = THREE.MathUtils.lerp(guiData.startBreakingTime, guiData.endBreakingTime, insideFactor) * guiData.totalAnimationTime;
                             }
                         }
+                        piece.init();
                         pieces.push(piece);
                     }
                 }
@@ -644,6 +647,11 @@ function update(deltaTime) {
             var translation = new THREE.Vector3().copy(p.velocity).multiplyScalar(p.speed * deltaTime);
             
             p.object3D.position.add(translation);
+            
+            if (p.object3D.position.z * rocks.scale.z > camera.position.z)
+            {
+                p.velocity.setZ(-Math.abs(p.velocity.z));
+            }
             
             translation.copy(p.object3D.position)
             p.object3D.applyQuaternion(new THREE.Quaternion().setFromAxisAngle(p.rotationAxis, p.rotationSpeed * deltaTime));
