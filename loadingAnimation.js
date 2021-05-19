@@ -582,7 +582,7 @@ function init() {
             const path = paths[ i ];
             const fillColor = path.userData.style.fill;
             
-            console.log(i, fillColor);
+            //console.log(i, fillColor);
             //if (i == 0) continue;
             
             if (fillColor !== undefined && fillColor !== 'none') {
@@ -597,7 +597,7 @@ function init() {
                     if (i == 2 && j == 31) continue; // Arrow
                     const shape = shapes[ j ];
                     const geometry = new THREE.ShapeGeometry( shape );
-                    console.log(j, geometry.attributes.position.array.length);
+                    //console.log(j, geometry.attributes.position.array.length);
                     
                     if (i == 2 && j < 23 && false) { // stars
                         const mesh = new THREE.Mesh(geometry, starMaterial);
