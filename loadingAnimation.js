@@ -35,6 +35,7 @@ animate();
 function init() {
     
     const DEPTH_PIECES = 3; // 3
+    const OUTLINE_DISPLACEMENT = 0.5;
 
     guiData = {
         spaceshipLogoSize: 1,
@@ -54,6 +55,7 @@ function init() {
         piecesRotationFriction: 0.112,
         piecesRotationSpeed: 5,
         piecesSpeed: 250,
+        piecesVerticalMovementFactor: 96,
         startBreakingTime: 0.05,
         endBreakingTime: 0.25,
         DEBUG_PLANE: false,
@@ -231,6 +233,7 @@ function init() {
                         containerDisplacement = new THREE.Vector3();
                         geometry.boundingBox.getCenter(containerDisplacement);
                         containerDisplacement.multiplyScalar(-1);
+                        containerDisplacement.add(new THREE.Vector3(14,0,5));
                         
                         geometry.translate(containerDisplacement.x, containerDisplacement.y, containerDisplacement.z);
                         geometry.computeBoundingBox();
@@ -350,12 +353,59 @@ function init() {
                         const mesh = new THREE.Mesh(geometry, invisibleMaterial);
                         pivot.add(mesh);
                         
+                        // Pieces cracks
+                        var computeVertexDistanceToCenter = function(j) {
+                            var p = new THREE.Vector3(geometry.attributes.position.array[j * 3], geometry.attributes.position.array[j * 3 + 1],geometry.attributes.position.array[j * 3 + 2]);
+                            p.add(pieceDisplacement);
+                            var d = p.lengthSq();
+                            //if (i == 26) console.log(pieceDisplacement, j, d);
+                            return d;
+                        };
+                        
+                        var vertexClosestToCenter = 0;
+                        var sqDistance = computeVertexDistanceToCenter(0);
+                        
+                        for (let x = 1; x < vertexCount; ++x)
+                        {
+                            var vDistance = computeVertexDistanceToCenter(x);
+                            if (vDistance < sqDistance) {
+                                vertexClosestToCenter = x;
+                                sqDistance = vDistance;
+                            }
+                        }
+                        
+                        
+                        var prevVertex = (vertexClosestToCenter + vertexCount - 1)%vertexCount;
+                        var nextVertex = (vertexClosestToCenter + 1)%vertexCount;
+                        //if (i == 26) console.log(prevVertex, vertexClosestToCenter, nextVertex);
+                        
+                        var crackPositions = [];
+                        
+                        crackPositions.push(geometry.attributes.position.array[prevVertex * 3]);
+                        crackPositions.push(geometry.attributes.position.array[prevVertex * 3 + 1] + OUTLINE_DISPLACEMENT);
+                        crackPositions.push(geometry.attributes.position.array[prevVertex * 3 + 2]);
+                        
+                        crackPositions.push(geometry.attributes.position.array[vertexClosestToCenter * 3]);
+                        crackPositions.push(geometry.attributes.position.array[vertexClosestToCenter * 3 + 1] + OUTLINE_DISPLACEMENT);
+                        crackPositions.push(geometry.attributes.position.array[vertexClosestToCenter * 3 + 2]);
+                        
+                        if (sqDistance < 1000) { // hand picked number
+                            crackPositions.push(geometry.attributes.position.array[nextVertex * 3]);
+                            crackPositions.push(geometry.attributes.position.array[nextVertex * 3 + 1] + OUTLINE_DISPLACEMENT);
+                            crackPositions.push(geometry.attributes.position.array[nextVertex * 3 + 2]);
+                        }
+                        
+                        var crackGeom = new THREE.BufferGeometry();
+                        crackGeom.setAttribute("position", new THREE.BufferAttribute(new Float32Array(crackPositions), 3));
+                        var crackMesh = new THREE.Line(crackGeom, outlineMaterial);
+                        pivot.add(crackMesh);
+                        
                         // Pieces outlines
                         const outlines = [];
                         var outlinePositions = [];
                         for (let x = 0; x < vertexCount * 3; ++x) // This is set by hand
                         {
-                            if (x % 3 == 1) outlinePositions.push(geometry.attributes.position.array[x] + 0.5); // for zfighting
+                            if (x % 3 == 1) outlinePositions.push(geometry.attributes.position.array[x] + OUTLINE_DISPLACEMENT); // for zfighting
                             else outlinePositions.push(geometry.attributes.position.array[x]);
                         }
                         const outlineGeometry = new THREE.BufferGeometry();
@@ -367,7 +417,7 @@ function init() {
                         outlinePositions = [];
                         for (let x = 0; x < vertexCount * 3; ++x) // This is set by hand
                         {
-                            if (x % 3 == 1) outlinePositions.push(geometry.attributes.position.array[x + vertexCount * 2 * 3] - 0.5); // for zfighting
+                            if (x % 3 == 1) outlinePositions.push(geometry.attributes.position.array[x + vertexCount * 2 * 3] - OUTLINE_DISPLACEMENT); // for zfighting
                             else outlinePositions.push(geometry.attributes.position.array[x + vertexCount * 2 * 3]);
                         }
                         const outlineGeometryUnder = new THREE.BufferGeometry();
@@ -386,6 +436,7 @@ function init() {
                             velocity: new THREE.Vector3(),
                             speed: 0,
                             mesh: mesh,
+                            crack: crackMesh,
                             outlines: outlines,
                             staticTime: 0,
                             sortedOrder: 0,
@@ -393,13 +444,14 @@ function init() {
                             
                             setMoving: function(m) {
                                 this.moving = m;
+                                this.outlines[0].visible = m;
+                                this.outlines[1].visible = m;
+                                this.mesh.material = !m? invisibleMaterial : piecesMaterial;
                             },
                             
                             showOutline: function(m) {
-                                this.mesh.material = !m? invisibleMaterial : piecesMaterial;
-                                this.outlines[0].visible = m;
-                                this.outlines[1].visible = m;
                                 this.showingOutline = m;
+                                this.crack.visible = m;
                             },
                             
                             init: function () {
@@ -409,7 +461,7 @@ function init() {
                                 
                                 
                                 this.velocity.copy(this.originalPosition);
-                                this.velocity.setY(45);
+                                this.velocity.setY(guiData.piecesVerticalMovementFactor);
                                 this.velocity.normalize();
                                 
                                 var receivedSpeed = easing.easeInCirc(Math.abs(this.velocity.y));
@@ -420,11 +472,10 @@ function init() {
                                 this.showOutline(false);
                                 
                                 var insideFactor = this.sortedOrder/(pieces.length - 1);
-                                insideFactor = easing.easeOutCirc(insideFactor);
+                                insideFactor = easing.easeInSine(insideFactor);
                                 this.staticTime = THREE.MathUtils.lerp(guiData.startBreakingTime, guiData.endBreakingTime, insideFactor) * guiData.totalAnimationTime;
                             }
                         }
-                        piece.init();
                         pieces.push(piece);
                     }
                 }
@@ -436,8 +487,10 @@ function init() {
             sortedPieces.sort(function(a, b) {
                 return pieces[a].originalPosition.lengthSq() - pieces[b].originalPosition.lengthSq();
             });
-            for (let i = 0; i < sortedPieces.length; ++i)
+            for (let i = 0; i < sortedPieces.length; ++i) {
                 pieces[sortedPieces[i]].sortedOrder = i;
+                //if (i == 9) console.log(sortedPieces[i]);
+            }
                 
             for (let i = 0; i < pieces.length; ++i)
                 pieces[i].init();
@@ -530,6 +583,7 @@ function createDebugGUI ()
     rocksGUI.add(guiData, "piecesRotationSpeed", 0, 50).name("rotation speed").onChange(restart);
     rocksGUI.add(guiData, "piecesSpeedFriction", 0, 10).name("translation friction");
     rocksGUI.add(guiData, "piecesRotationFriction", 0, 2).name("rotation friction");
+    rocksGUI.add(guiData, "piecesVerticalMovementFactor", 0, 500).name("vertical movement amount").onChange(restart);
     // TODO rocks rotation and speed GUI
     
     
