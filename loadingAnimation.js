@@ -59,8 +59,8 @@ function init() {
         piecesVerticalMovementFactor: 96,
         startBreakingTime: 0.05,
         endBreakingTime: 0.25,
-        logoFadeinStart: 0.3,
-        logoFadeinEnd: 0.8,
+        logoFadeinStart: 1,
+        logoFadeinEnd: 1.3,
         DEBUG_PLANE: false,
         DEBUG_RESIZABLE_WINDOW: false
     }
@@ -69,9 +69,8 @@ function init() {
     canvas = document.querySelector('#c');
     renderer = new THREE.WebGL1Renderer({
         canvas: canvas,
-        alpha: true,
-        antialias: true
-    
+        alpha: true
+        //antialias: true
     });
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -102,7 +101,10 @@ function init() {
 
     document.body.appendChild(renderer.domElement);
 
-    const bgTexture = new THREE.TextureLoader().load('res/option2.jpg');
+    const bgTexture = new THREE.TextureLoader().load('res/option2.jpg', function () {
+        filesWaitingToLoad--;
+    });
+    filesWaitingToLoad++;
     const cubeTextureLoader = new THREE.CubeTextureLoader();
     cubeTextureLoader.setPath("res/");
     //var envBGTexture = cubeTextureLoader.load(['skybox-square.jpg', 'skybox-square.jpg', 'skybox-square.jpg', 'skybox-square.jpg', 'skybox-square.jpg', 'skybox-square.jpg']);
@@ -678,8 +680,8 @@ function createDebugGUI ()
     rocksGUI.add(guiData, "piecesRotationFriction", 0, 2).name("rotation friction");
     rocksGUI.add(guiData, "piecesVerticalMovementFactor", 0, 500).name("vertical movement amount").onChange(restart);
     var logoGUI = gui.addFolder("Logo");
-    logoGUI.add(guiData, "logoFadeinStart", 0, 1).name("fadein start %");
-    logoGUI.add(guiData, "logoFadeinEnd", 0, 1).name("fadein start %");
+    logoGUI.add(guiData, "logoFadeinStart", 0, 2).name("fadein start %");
+    logoGUI.add(guiData, "logoFadeinEnd", 0, 2).name("fadein start %");
     
     
     var debugGUI = gui.addFolder("DEBUG");
@@ -748,7 +750,8 @@ function render() {
 function update(deltaTime) {
     animationTime += deltaTime;
 
-    const animationFactor = Math.max(0, Math.min(1, animationTime / guiData.totalAnimationTime));
+    const unclampedAnimationFactor = animationTime / guiData.totalAnimationTime;
+    const animationFactor = Math.max(0, Math.min(1, unclampedAnimationFactor));
 
     if (animationFactor < guiData.spaceshipStartMovingFactor) {
         arrow.position.y = guiData.spaceshipStartY;
@@ -842,7 +845,7 @@ function update(deltaTime) {
         setLogoTransparency(0);
     }
     else if (animationFactor < guiData.logoFadeinEnd) {
-        setLogoTransparency(easing.easeInQuad((animationFactor - guiData.logoFadeinStart)/(guiData.logoFadeinEnd - guiData.logoFadeinStart)));
+        setLogoTransparency(easing.easeInQuad((unclampedAnimationFactor - guiData.logoFadeinStart)/(guiData.logoFadeinEnd - guiData.logoFadeinStart)));
     }
     else {
         setLogoTransparency(1);
