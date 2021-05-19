@@ -76,8 +76,8 @@ function init() {
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
 
-    stats = new Stats();
-    document.getElementById('stats').appendChild(stats.dom);
+    //stats = new Stats();
+    //document.getElementById('stats').appendChild(stats.dom);
     
     // Main Scene
     scene = new THREE.Scene();
@@ -665,6 +665,8 @@ function createDebugGUI ()
             scene.add(DEBUG_plane);
         else scene.remove(DEBUG_plane);
     });
+    
+    gui.closed = true;
 
     // GUI
 }
@@ -705,7 +707,7 @@ function animate() {
     {
         update(deltaTime);
         render();
-        stats.update();
+        //stats.update();
     }
 }
 
