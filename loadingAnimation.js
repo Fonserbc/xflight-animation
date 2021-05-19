@@ -101,7 +101,7 @@ function init() {
 
     document.body.appendChild(renderer.domElement);
 
-    const bgTexture = new THREE.TextureLoader().load('res/option2.jpg', function () {
+    const bgTexture = new THREE.TextureLoader().load('res/option2_2kHeight.jpg', function () {
         piecesMaterial.uniforms.bgTexture.value = bgTexture;
         filesWaitingToLoad--;
     });
