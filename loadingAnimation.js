@@ -12,9 +12,11 @@ var filesWaitingToLoad = 0;
 var trail, trailGeometry, trailPositions = [], trailFrameCount = 64, trailIndex = 0;
 var logoPivot, logoGroup, logoMaterials = [];
 
-var holeOutlineMesh, rocks;
+var holeOutlineMesh, rocks, wormholeLines = [];
 var pieces = [];
 var sortedPieces = [];
+
+var moon;
 
 var animationTime = 0;
 var DEBUG_plane;
@@ -61,6 +63,10 @@ function init() {
         endBreakingTime: 0.25,
         logoFadeinStart: 1,
         logoFadeinEnd: 1.3,
+        moonSize: 10,
+        moonRPM: 1,
+        moonPositionY: 38,
+        wormholeRotationSpeed: 1,
         DEBUG_PLANE: false,
         DEBUG_RESIZABLE_WINDOW: false
     }
@@ -74,6 +80,7 @@ function init() {
     });
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
 
     stats = new Stats();
     document.getElementById('stats').appendChild(stats.dom);
@@ -98,24 +105,6 @@ function init() {
     scene.add(arrow);
 
     
-
-    document.body.appendChild(renderer.domElement);
-
-    const bgTexture = new THREE.TextureLoader().load('res/option2_2kHeight.jpg', function () {
-        piecesMaterial.uniforms.bgTexture.value = bgTexture;
-        filesWaitingToLoad--;
-    });
-    filesWaitingToLoad++;
-    const cubeTextureLoader = new THREE.CubeTextureLoader();
-    cubeTextureLoader.setPath("res/");
-    //var envBGTexture = cubeTextureLoader.load(['skybox-square.jpg', 'skybox-square.jpg', 'skybox-square.jpg', 'skybox-square.jpg', 'skybox-square.jpg', 'skybox-square.jpg']);
-    //scene.background = envBGTexture;
-    
-    bgTexture.wrapS = THREE.MirroredRepeatWrapping;
-    bgTexture.wrapT = THREE.MirroredRepeatWrapping;
-    bgTexture.mapping = THREE.EquirectangularReflectionMapping;
-    bgTexture.minFilter = THREE.NearestFilter;
-
     // MATERIALS
     
     const invisibleMaterial = new THREE.MeshBasicMaterial({ colorWrite: false });
@@ -129,7 +118,7 @@ function init() {
         uniforms: {
             screenRatio: { value: window.innerWidth / window.innerHeight},
             textureRatio: {value: 1.4145 }, // TODO update this ratio if we change the BG image
-            bgTexture: {value: bgTexture}
+            bgTexture: {value: undefined}
         },
         vertexShader: document.getElementById( 'vertexShaderPieces' ).textContent,
         fragmentShader: document.getElementById( 'fragmentShaderPieces' ).textContent,
@@ -144,7 +133,35 @@ function init() {
         linewidth: 3
     });
     const debugMaterial = new THREE.MeshBasicMaterial({color: 0xff00ff});
+    const moonMaterial = new THREE.MeshBasicMaterial({map: null});
+
     
+
+    const textureLoader = new THREE.TextureLoader();
+    textureLoader.load('res/option2_2kHeight.jpg', function (bgTexture) {
+        
+        bgTexture.wrapS = THREE.MirroredRepeatWrapping;
+        bgTexture.wrapT = THREE.MirroredRepeatWrapping;
+        //bgTexture.mapping = THREE.EquirectangularReflectionMapping;
+        bgTexture.minFilter = THREE.NearestFilter;
+        
+        piecesMaterial.uniforms.bgTexture.value = bgTexture;
+        filesWaitingToLoad--;
+    });
+    filesWaitingToLoad++;
+    
+    textureLoader.load('res/moontexture-1024h.jpg', function (texture) {
+        moonMaterial.map = texture;
+        console.log("loaded moon", moonMaterial, texture);
+    });
+    
+    // moon
+    moon = new THREE.Mesh(new THREE.SphereGeometry(1,32,32), moonMaterial);
+    moon.position.y = guiData.moonPositionY;
+    moon.scale.set(guiData.moonSize, guiData.moonSize, guiData.moonSize);
+    scene.add(moon);
+    
+    // logo
     logoPivot = new THREE.Object3D();
     logoPivot.position.y = guiData.spaceshipEndY;
     scene.add(logoPivot);
@@ -534,7 +551,7 @@ function init() {
                 rocks.add(line);
             }
             
-            const verticalLineEveryN = 3;
+            const verticalLineEveryN = 1;
             for (let i = 0; i < circleSegments; i += verticalLineEveryN)
             {
                 const points = [];
@@ -544,6 +561,7 @@ function init() {
                 }
                 const wormholeVerticalGeometry = new THREE.BufferGeometry().setFromPoints( points );
                 const line = new THREE.Line( wormholeVerticalGeometry, wormlinesMaterial );
+                wormholeLines.push(line);
                 rocks.add(line);
             }
             
@@ -674,6 +692,7 @@ function createDebugGUI ()
     });
     holeGUI.add(guiData, "startBreakingTime", 0, 1).name("startBreakAnim %").onChange(restart);
     holeGUI.add(guiData, "endBreakingTime", 0, 1).name("endBreakAnim %").onChange(restart);
+    holeGUI.add(guiData, "wormholeRotationSpeed").name("lines rotation speed");
     var rocksGUI = gui.addFolder("Rocks");
     rocksGUI.add(guiData, "piecesSpeed").name("translation speed").onChange(restart);
     rocksGUI.add(guiData, "piecesRotationSpeed", 0, 50).name("rotation speed").onChange(restart);
@@ -683,6 +702,12 @@ function createDebugGUI ()
     var logoGUI = gui.addFolder("Logo");
     logoGUI.add(guiData, "logoFadeinStart", 0, 2).name("fadein start %");
     logoGUI.add(guiData, "logoFadeinEnd", 0, 2).name("fadein start %");
+    var moonGUI = gui.addFolder("Moon");
+    moonGUI.add(guiData, "moonSize", 0, 50).name("size").onChange(function() {
+        moon.scale.set(guiData.moonSize, guiData.moonSize, guiData.moonSize);
+    });
+    moonGUI.add(guiData, "moonRPM", -10, 10).name("rotations/minute");
+    moonGUI.add(guiData, "moonPositionY").name("Y position");
     
     
     var debugGUI = gui.addFolder("DEBUG");
@@ -850,6 +875,21 @@ function update(deltaTime) {
     }
     else {
         setLogoTransparency(1);
+    }
+    
+    //moon
+    moon.position.y = guiData.moonPositionY;
+    //var moonRotation = new THREE.Quaternion().setFromAxisAngle(new THREE.)
+    var moonRotationAxis = new THREE.Vector3(0,1,1);
+    moonRotationAxis.normalize();
+    moon.quaternion.setFromAxisAngle(moonRotationAxis, animationTime * guiData.moonRPM / 60 * Math.PI * 2);
+    
+    // Wormhole lines
+    var wormholeAxis = new THREE.Vector3(0,1,0);
+    for (let i = 0; i < wormholeLines.length; ++i) {
+        var r = animationTime * (i + 1)/wormholeLines.length * Math.PI * guiData.wormholeRotationSpeed;
+        if (i % 2 == 0) r = -r;
+        wormholeLines[i].quaternion.setFromAxisAngle(wormholeAxis, r);
     }
 }
 
