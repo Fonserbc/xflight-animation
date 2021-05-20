@@ -118,7 +118,7 @@ function init() {
         uniforms: {
             screenRatio: { value: window.innerWidth / window.innerHeight},
             textureRatio: {value: 1.4145 }, // TODO update this ratio if we change the BG image
-            bgTexture: {value: undefined}
+            bgTexture: {value: null}
         },
         vertexShader: document.getElementById( 'vertexShaderPieces' ).textContent,
         fragmentShader: document.getElementById( 'fragmentShaderPieces' ).textContent,
@@ -672,23 +672,23 @@ function createDebugGUI ()
     // GUI
 
     gui.add(guiData, "spaceshipLogoSize", 0.001, 20).name("Spaceship&Logo Size").onChange(function () { arrow.resizeArrow(guiData.spaceshipLogoSize); });
-    gui.add(guiData, "totalAnimationTime", 1, 40).name("Animation Time").onChange(restart);
+    gui.add(guiData, "totalAnimationTime", 1, 40).name("Animation Time");
     var cameraGUI = gui.addFolder("Camera");
     cameraGUI.add(guiData, "cameraFOV", 10, 90).name("Field of View").onChange(function () { camera.fov = guiData.cameraFOV; camera.updateProjectionMatrix(); });
     cameraGUI.add(guiData, "cameraDistanceZ", 0.5, 100).name("Z distance").onChange(function () { camera.position.z = guiData.cameraDistanceZ; });
-    cameraGUI.add(guiData, "cameraStartY").name("start Y position").onChange(restart);
-    cameraGUI.add(guiData, "cameraEndY").name("end Y position").onChange(restart);
+    cameraGUI.add(guiData, "cameraStartY").name("start Y position");
+    cameraGUI.add(guiData, "cameraEndY").name("end Y position");
     cameraGUI.add(guiData, "cameraDoTilt").name("tilt camera");
     cameraGUI.add(guiData, "cameraStartLookingAtShipFactor", 0, 1).name("lookAtShipStartAnim %");
     cameraGUI.add(guiData, "cameraStartLookingAtHeight").name("Start lookAt height");
     var spaceshipGUI = gui.addFolder("Spaceship");
-    spaceshipGUI.add(guiData, "spaceshipStartY").name("start Y position").onChange(restart);
-    spaceshipGUI.add(guiData, "spaceshipEndY").name("end Y position").onChange(restart);
-    spaceshipGUI.add(guiData, "spaceshipStartMovingFactor", 0, 1).name("startMovingAnim %").onChange(restart);
+    spaceshipGUI.add(guiData, "spaceshipStartY").name("start Y position");
+    spaceshipGUI.add(guiData, "spaceshipEndY").name("end Y position");
+    spaceshipGUI.add(guiData, "spaceshipStartMovingFactor", 0, 1).name("startMovingAnim %");
     var holeGUI = gui.addFolder("Wormhole");
     holeGUI.add(guiData, "holeSize", 0, 100).name("Hole Size").onChange(function () {
         rocks.resizeHole(guiData.holeSize);
-        restart();
+        //restart();
     });
     holeGUI.add(guiData, "startBreakingTime", 0, 1).name("startBreakAnim %").onChange(restart);
     holeGUI.add(guiData, "endBreakingTime", 0, 1).name("endBreakAnim %").onChange(restart);
