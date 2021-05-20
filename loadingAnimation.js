@@ -531,7 +531,7 @@ function init() {
             const circleRadiusMin = circleRadiusMax * 0.3;
             const distanceBetweenCircles = circleRadiusMax * 0.1;
             var rocksCenter = new THREE.Vector3();
-            rocks.boundingBox.getCenter(rocksCenter);
+            //rocks.boundingBox.getCenter(rocksCenter);
             
             var allCirclePoints = [];
             for(let i = 0; i < numberOfCircles; ++i)
