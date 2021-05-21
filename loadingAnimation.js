@@ -6,20 +6,20 @@ import { GUI } from "./lib/dat.gui.js";
 import Stats from "./lib/stats.js";
 import easing from "./lib/easings.js";
 
-var canvas, stats, camera, scene, renderer, arrow, trail, gui, guiData;
-var filesWaitingToLoad = 0;
+let canvas, stats, camera, scene, renderer, arrow, gui, guiData;
+let filesWaitingToLoad = 0;
 
-var trail, trailGeometry, trailPositions = [], trailFrameCount = 64, trailIndex = 0;
-var logoPivot, logoGroup, logoMaterials = [];
+let trail, trailGeometry, trailMaterial;
+let logoPivot, logoGroup, logoMaterials = [];
 
-var holeOutlineMesh, rocks, wormholeLines = [];
-var pieces = [];
-var sortedPieces = [];
+let holeOutlineMesh, rocks, wormholeLines = [];
+let pieces = [];
+let sortedPieces = [];
 
-var moon;
+let moon;
 
-var animationTime = 0;
-var DEBUG_plane;
+let animationTime = 0;
+let DEBUG_plane;
 
 var moveTowards = function(from, to, delta)
 {
@@ -67,6 +67,11 @@ function init() {
         moonRPM: 0.3,
         moonPositionY: 38,
         wormholeRotationSpeed: 1,
+        trailLengthStart: 6,
+        trailLengthEnd: 200,
+        trailWidth: 2,
+        trailRandomFactor: 0.75,
+        trailEndFactor: 0.66,
         DEBUG_PLANE: false,
         DEBUG_RESIZABLE_WINDOW: true
     }
@@ -152,12 +157,12 @@ function init() {
     
     textureLoader.load('res/moontexture-1024h.jpg', function (texture) {
         moonMaterial.map = texture;
-        console.log("loaded moon", moonMaterial, texture);
+        //console.log("loaded moon", moonMaterial, texture);
     });
     
     // moon
     moon = new THREE.Mesh(new THREE.SphereGeometry(1,32,32), moonMaterial);
-    console.log(moon.geometry.attributes.position.array.length);
+    //console.log(moon.geometry.attributes.position.array.length);
     moon.position.y = guiData.moonPositionY;
     moon.scale.set(guiData.moonSize, guiData.moonSize, guiData.moonSize);
     scene.add(moon);
@@ -215,20 +220,33 @@ function init() {
             arrow.resizeArrow(guiData.spaceshipLogoSize);
             
             // trail
-            while (trailIndex < trailFrameCount)
-            {
-                trailPositions.push(arrow.position.clone());
-                trailIndex++;
-            }
-            trailIndex = 0;
+            
             var trailVertices = [];
-            trailVertices.push(trailPositions[0].clone());
-            trailVertices.push(trailPositions[0].clone());
-            trailGeometry = new THREE.BufferGeometry().setFromPoints(trailVertices);
+            trailVertices.push(0, 0, 0);
+            trailVertices.push(-1, -1, 0);
+            trailVertices.push(1, -1, 0);
+            
+            trailGeometry = new THREE.BufferGeometry();
+            trailGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(trailVertices), 3));
+            
+            //console.log(trailGeometry);
+            
+            trailMaterial = new THREE.ShaderMaterial({
+                transparent: true,
+                //blending: THREE.AdditiveBlending,
+                //side: THREE.DoubleSide,
+                uniforms: {
+                    color: { value: new THREE.Color(0x49FF5E) }
+                },
+                vertexShader: document.getElementById( 'vertexTrail' ).textContent,
+                fragmentShader: document.getElementById( 'fragmentTrail' ).textContent
+            });
             // trail
             
-            trail = new THREE.LineSegments(trailGeometry, wormlinesMaterial);
-            scene.add(trail);
+            trail = new THREE.Mesh(trailGeometry, trailMaterial);// new THREE.LineSegments(trailGeometry, trailMaterial);
+            trail.scale.set( 1, 10, 1 );
+            arrow.add(trail);
+            trail.position.y = -.5;
             
             
             filesWaitingToLoad--;
@@ -709,6 +727,12 @@ function createDebugGUI ()
     });
     moonGUI.add(guiData, "moonRPM", -10, 10).name("rotations/minute");
     moonGUI.add(guiData, "moonPositionY").name("Y position");
+    var trailGUI = gui.addFolder("Trail");
+    trailGUI.add(guiData, "trailWidth", 0, 10).name("max width");
+    trailGUI.add(guiData, "trailRandomFactor", 0, 1).name("random width %");
+    trailGUI.add(guiData, "trailLengthStart", 0, 100).name("length start");
+    trailGUI.add(guiData, "trailLengthEnd", 0, 300).name("length end");
+    trailGUI.add(guiData, "trailEndFactor", 0, 1).name("end animation %");
     
     
     var debugGUI = gui.addFolder("DEBUG");
@@ -785,26 +809,24 @@ function update(deltaTime) {
     if (animationFactor < guiData.spaceshipStartMovingFactor) {
         arrow.position.y = guiData.spaceshipStartY;
         camera.position.y = guiData.cameraStartY;
+        
+        trail.visible = true;
+        trail.scale.set(guiData.trailWidth, guiData.trailLengthStart, 1);
     }
     else {
         var f = (animationFactor - guiData.spaceshipStartMovingFactor)/(1 - guiData.spaceshipStartMovingFactor);
         arrow.position.y = THREE.MathUtils.lerp(guiData.spaceshipStartY, guiData.spaceshipEndY, easing.easeOutCubic(f));
         camera.position.y = THREE.MathUtils.lerp(guiData.cameraStartY, guiData.cameraEndY, easing.easeInOutSine(f));
+        
+        var trailF = (animationFactor - guiData.spaceshipStartMovingFactor)/(guiData.trailEndFactor - guiData.spaceshipStartMovingFactor);
+        if (trailF < 1) {
+            trail.visible = true;
+            let trailFixedFactor = 1 - guiData.trailRandomFactor;
+            trail.scale.set(Math.random() * guiData.trailWidth * guiData.trailRandomFactor + guiData.trailWidth * trailFixedFactor, THREE.MathUtils.lerp(guiData.trailLengthStart, guiData.trailLengthEnd, easing.easeInCubic(trailF)), 1);
+        }
+        else 
+            trail.visible = false;
     }
-    
-    // update trail
-    trailPositions[trailIndex].copy(arrow.position);
-    trailIndex = (trailIndex + 1)%trailPositions.length;
-    
-    const lastTrailIndex = (trailIndex + trailPositions.length - 1)%trailPositions.length;
-    
-    trailGeometry.attributes.position.array[0] = trailPositions[trailIndex].x;
-    trailGeometry.attributes.position.array[1] = trailPositions[trailIndex].y - 0.1;
-    trailGeometry.attributes.position.array[2] = trailPositions[trailIndex].z - 0.1;
-    trailGeometry.attributes.position.array[3] = trailPositions[lastTrailIndex].x;
-    trailGeometry.attributes.position.array[4] = trailPositions[lastTrailIndex].y - 0.1;
-    trailGeometry.attributes.position.array[5] = trailPositions[lastTrailIndex].z - 0.1;
-    trailGeometry.attributes.position.needsUpdate = true;
     
     if (guiData.cameraDoTilt) {
         if (animationFactor < guiData.cameraStartLookingAtShipFactor)
@@ -905,13 +927,6 @@ function restart() {
     }
     
     arrow.position.y = guiData.spaceshipStartY;
-    trailIndex = 0;
-    while (trailIndex < trailFrameCount)
-    {
-        trailPositions[trailIndex].copy(arrow.position);
-        trailIndex++;
-    }
-    trailIndex = 0;
     
     logoPivot.position.y = guiData.spaceshipEndY;
 }

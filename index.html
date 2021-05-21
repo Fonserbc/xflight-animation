@@ -25,6 +25,7 @@
     <script type="module" src="./loadingAnimation.js"></script>
     
     <script id="vertexShaderPieces" type="x-shader/x-vertex">
+        #extension GL_OES_standard_derivatives : enable
         precision mediump float;
     
         //varying vec3 vNormal;
@@ -41,6 +42,7 @@
         }
     </script>
     <script id="fragmentShaderPieces" type="x-shader/x-fragment">
+        #extension GL_OES_standard_derivatives : enable
         precision mediump float;
     
         uniform sampler2D bgTexture;
@@ -55,7 +57,6 @@
             
             vec2 coord = screenPos;
             
-            #extension GL_OES_standard_derivatives : enable
             vec3 fdx = vec3(dFdx(vPos.x),dFdx(vPos.y),dFdx(vPos.z));
             vec3 fdy = vec3(dFdy(vPos.x),dFdy(vPos.y),dFdy(vPos.z));
             vec3 N = normalize(cross(fdx,fdy));
@@ -78,6 +79,31 @@
             //float shine = shiningFactor * shiningFactor * shiningFactor * shiningFactor * 0.05;
             
             gl_FragColor = vec4(texture2D(bgTexture, coord).rgb, 1);//, 1);// + 
+        }
+    </script>
+    <script id="vertexTrail" type="x-shader/x-vertex">
+        precision mediump float;
+    
+        varying float transparency;
+    
+        void main(void) {
+            vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+            transparency = 1.0 + position.y;
+            
+            gl_Position = projectionMatrix * mvPosition;
+        }
+    </script>
+    <script id="fragmentTrail" type="x-shader/x-fragment">
+        precision mediump float;
+    
+        uniform vec3 color;
+        varying float transparency;
+        
+        void main(void) {
+            
+            float t = transparency * transparency * transparency;
+            
+            gl_FragColor = vec4(color, 1.0 - t);
         }
     </script>
 </body>
