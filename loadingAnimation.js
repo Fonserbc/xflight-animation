@@ -64,11 +64,11 @@ function init() {
         logoFadeinStart: 1,
         logoFadeinEnd: 1.3,
         moonSize: 10,
-        moonRPM: 1,
+        moonRPM: 0.3,
         moonPositionY: 38,
         wormholeRotationSpeed: 1,
         DEBUG_PLANE: false,
-        DEBUG_RESIZABLE_WINDOW: false
+        DEBUG_RESIZABLE_WINDOW: true
     }
     // rendering
     
@@ -157,6 +157,7 @@ function init() {
     
     // moon
     moon = new THREE.Mesh(new THREE.SphereGeometry(1,32,32), moonMaterial);
+    console.log(moon.geometry.attributes.position.array.length);
     moon.position.y = guiData.moonPositionY;
     moon.scale.set(guiData.moonSize, guiData.moonSize, guiData.moonSize);
     scene.add(moon);
@@ -736,13 +737,17 @@ function setLogoTransparency(f)
 
 
 function resizeRendererToDisplaySize(renderer) {
+    
     const canvas = renderer.domElement;
     const pixelRatio = window.devicePixelRatio;
-    const width = canvas.clientWidth * pixelRatio | 0;
-    const height = canvas.clientHeight * pixelRatio | 0;
+    const width = window.innerWidth * pixelRatio | 0;
+    const height = window.innerHeight * pixelRatio | 0;
     const needResize = canvas.width !== width || canvas.height !== height;
     if (needResize) {
-        renderer.setSize(width, height, false);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
     }
     return needResize;
 }
@@ -764,10 +769,8 @@ function animate() {
 }
 
 function render() {
-    if (guiData.resizableWindow && resizeRendererToDisplaySize(renderer)) {
-        const canvas = renderer.domElement;
-        camera.aspect = canvas.clientWidth / canvas.clientHeight;
-        camera.updateProjectionMatrix();
+    if (guiData.DEBUG_RESIZABLE_WINDOW && resizeRendererToDisplaySize(renderer)) {
+        //console.log("canvas resized to ", window.innerWidth, window.innerHeight);
     }
 
     renderer.render(scene, camera);
