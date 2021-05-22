@@ -63,14 +63,19 @@ function init() {
         endBreakingTime: 0.25,
         logoFadeinStart: 1,
         logoFadeinEnd: 1.3,
-        moonSize: 10,
+        moonSize: 8,
         moonRPM: 0.3,
-        moonPositionY: 38,
+        moonPositionY: 37,
+        moonPositionZ: 0,
+        doMoonGravity: false,
+        moonGravity: 1000000,
+        collideMoon: true,
+        collisionBounciness: 0.3,
         wormholeRotationSpeed: 1,
         trailLengthStart: 6,
         trailLengthEnd: 200,
         trailWidth: 2,
-        trailRandomFactor: 0.75,
+        trailRandomFactor: 0.5,
         trailEndFactor: 0.66,
         DEBUG_PLANE: false,
         DEBUG_RESIZABLE_WINDOW: true
@@ -718,6 +723,11 @@ function createDebugGUI ()
     rocksGUI.add(guiData, "piecesSpeedFriction", 0, 10).name("translation friction");
     rocksGUI.add(guiData, "piecesRotationFriction", 0, 2).name("rotation friction");
     rocksGUI.add(guiData, "piecesVerticalMovementFactor", 0, 500).name("vertical movement amount").onChange(restart);
+    var physicsGUI = gui.addFolder("Physics");
+    physicsGUI.add(guiData, "doMoonGravity").name("moon gravity");
+    physicsGUI.add(guiData, "moonGravity").name("moon mass");
+    physicsGUI.add(guiData, "collideMoon").name("moon collision");
+    physicsGUI.add(guiData, "collisionBounciness", 0, 2).name("moon bounciness");
     var logoGUI = gui.addFolder("Logo");
     logoGUI.add(guiData, "logoFadeinStart", 0, 2).name("fadein start %");
     logoGUI.add(guiData, "logoFadeinEnd", 0, 2).name("fadein start %");
@@ -727,6 +737,7 @@ function createDebugGUI ()
     });
     moonGUI.add(guiData, "moonRPM", -10, 10).name("rotations/minute");
     moonGUI.add(guiData, "moonPositionY").name("Y position");
+    moonGUI.add(guiData, "moonPositionZ").name("Z position");
     var trailGUI = gui.addFolder("Trail");
     trailGUI.add(guiData, "trailWidth", 0, 10).name("max width");
     trailGUI.add(guiData, "trailRandomFactor", 0, 1).name("random width %");
@@ -851,6 +862,8 @@ function update(deltaTime) {
     
     var visiblePieces = 0;
     var movingPieces = 0;
+    var moonPositionRocks = new THREE.Vector3().copy(moon.position).divideScalar(rocks.scale.x);
+    var moonRadius = guiData.moonSize / rocks.scale.x;
     for (let i = 0; i < pieces.length; ++i)
     {
         const p = pieces[i];
@@ -860,6 +873,26 @@ function update(deltaTime) {
             p.speed = moveTowards(p.speed, 0, deltaTime * guiData.piecesSpeedFriction);
             p.rotationSpeed = moveTowards(p.rotationSpeed, 0, deltaTime * guiData.piecesRotationFriction);
             
+            // gravity
+            if (guiData.doMoonGravity)
+            {
+                var instantVel = p.velocity.clone();
+                instantVel.multiplyScalar(p.speed);
+                
+                var moonDeltaPos = new THREE.Vector3().copy(moonPositionRocks).sub(p.object3D.position);
+                var distanceToMoonSq = moonDeltaPos.lengthSq();
+                var gravityAcc = new THREE.Vector3().copy(moonDeltaPos);
+                gravityAcc.normalize();
+                var gravityForce = guiData.moonGravity / distanceToMoonSq;
+                gravityAcc.multiplyScalar(gravityForce * deltaTime);
+                    
+                instantVel.add(gravityAcc);
+                
+                p.speed = instantVel.length();
+                instantVel.normalize();
+                p.velocity.copy(instantVel);
+            }
+            
             var translation = new THREE.Vector3().copy(p.velocity).multiplyScalar(p.speed * deltaTime);
             
             p.object3D.position.add(translation);
@@ -867,6 +900,23 @@ function update(deltaTime) {
             if (p.object3D.position.z * rocks.scale.z > camera.position.z)
             {
                 p.velocity.setZ(-Math.abs(p.velocity.z));
+            }
+            
+            if (guiData.collideMoon)
+            {
+                moonDeltaPos = new THREE.Vector3().copy(p.object3D.position).sub(moonPositionRocks);
+                var distanceToMoon = moonDeltaPos.length();
+                if (distanceToMoon < moonRadius)
+                {
+                    var correction = moonDeltaPos.clone().normalize();
+                    correction.multiplyScalar(moonRadius);
+                    p.object3D.position.copy(moonPositionRocks).add(correction);
+                    
+                    moonDeltaPos.normalize();
+                    p.velocity.reflect(moonDeltaPos);
+                    p.rotationSpeed = p.speed * 0.01;
+                    p.speed *= guiData.collisionBounciness;
+                }
             }
             
             translation.copy(p.object3D.position)
@@ -904,6 +954,7 @@ function update(deltaTime) {
     
     //moon
     moon.position.y = guiData.moonPositionY;
+    moon.position.z = guiData.moonPositionZ;
     //var moonRotation = new THREE.Quaternion().setFromAxisAngle(new THREE.)
     var moonRotationAxis = new THREE.Vector3(0,1,1);
     moonRotationAxis.normalize();
