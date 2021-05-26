@@ -84,6 +84,7 @@ function init() {
         lineTrailEndFactor: 0.80,
         lineTrailLengthStart: -50,
         lineTrailLengthEnd: 0,
+        lineTrailRandomFactor: 0.5,
         DEBUG_PLANE: false,
         DEBUG_RESIZABLE_WINDOW: true
     }
@@ -279,9 +280,10 @@ function init() {
                     toY = fromY;
                     fromY = y;
                 }
+                let width = (1.0 - guiData.lineTrailRandomFactor + guiData.lineTrailRandomFactor * Math.random()) * guiData.lineTrailWidth;
                 // fromY is less than toY
-                lineTrail.scale.set(guiData.lineTrailWidth, toY - fromY + guiData.lineTrailWidth, 1);
-                lineTrail.position.setY(fromY - guiData.lineTrailWidth * 0.5 - guiData.lineTrailAttachmentHeight);
+                lineTrail.scale.set(width, toY - fromY + width, 1);
+                lineTrail.position.setY(fromY - width * 0.5 - guiData.lineTrailAttachmentHeight);
                 
                 lineTrailMaterial.uniforms.ratio.value = lineTrail.scale.x / lineTrail.scale.y;
                 //console.log(lineTrailMaterial.uniforms.ratio.value);
@@ -782,9 +784,10 @@ function createDebugGUI ()
     lineTrailGUI.add(guiData, "lineTrailEndFactor", 0, 1).name("end animation %");
     lineTrailGUI.add(guiData, "lineTrailLengthStart", -500, 0).name("length start");
     lineTrailGUI.add(guiData, "lineTrailLengthEnd", -500, 0).name("length end");
+    lineTrailGUI.add(guiData, "lineTrailRandomFactor", 0, 1).name("flicker width %");
     var trailGUI = gui.addFolder("OLD Trail");
     trailGUI.add(guiData, "trailWidth", 0, 10).name("max width");
-    trailGUI.add(guiData, "trailRandomFactor", 0, 1).name("random width %");
+    trailGUI.add(guiData, "trailRandomFactor", 0, 1).name("flicker width %");
     trailGUI.add(guiData, "trailLengthStart", 0, 100).name("length start");
     trailGUI.add(guiData, "trailLengthEnd", 0, 300).name("length end");
     trailGUI.add(guiData, "trailEndFactor", 0, 1).name("end animation %");
