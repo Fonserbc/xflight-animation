@@ -779,7 +779,7 @@ function createDebugGUI ()
     moonGUI.add(guiData, "moonPositionY").name("Y position");
     moonGUI.add(guiData, "moonPositionZ").name("Z position");
     var lineTrailGUI = gui.addFolder("Line Trail");
-    lineTrailGUI.add(guiData, "lineTrailWidth", 0, 10).name("width");
+    lineTrailGUI.add(guiData, "lineTrailWidth", 0, 1).name("width");
     lineTrailGUI.add(guiData, "lineTrailAttachmentHeight", -10, 0).name("attached pos Y");
     lineTrailGUI.add(guiData, "lineTrailEndFactor", 0, 1).name("end animation %");
     lineTrailGUI.add(guiData, "lineTrailLengthStart", -500, 0).name("length start");
