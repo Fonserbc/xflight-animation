@@ -84,7 +84,7 @@ function init() {
         lineTrailEndFactor: 0.80,
         lineTrailLengthStart: -50,
         lineTrailLengthEnd: 0,
-        lineTrailRandomFactor: 0.5,
+        lineTrailRandomFactor: 0,
         DEBUG_PLANE: false,
         DEBUG_RESIZABLE_WINDOW: true
     }
