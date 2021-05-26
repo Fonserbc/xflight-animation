@@ -58,20 +58,21 @@ function init() {
         holeSize: 30,
         piecesSpeedFriction: 0.41,
         piecesRotationFriction: 0.112,
-        piecesRotationSpeed: 5,
-        piecesSpeed: 250,
+        piecesRotationSpeed: 4,
+        piecesSpeed: 170,
         piecesVerticalMovementFactor: 96,
         startBreakingTime: 0.05,
         endBreakingTime: 0.25,
         logoFadeinStart: 1,
         logoFadeinEnd: 1.3,
-        moonSize: 8,
+        moonSize: 22,
         moonRPM: 0.3,
-        moonPositionY: 37,
-        moonPositionZ: 0,
+        moonPositionY: 70,
+        moonStartPositionY: 90,
+        moonPositionZ: -60,
         doMoonGravity: false,
         moonGravity: 1000000,
-        collideMoon: true,
+        collideMoon: false,
         collisionBounciness: 0.3,
         wormholeRotationSpeed: 1,
         trailLengthStart: 6,
@@ -80,7 +81,7 @@ function init() {
         trailRandomFactor: 0.5,
         trailEndFactor: 0.66,
         lineTrailWidth: 0.1,
-        lineTrailAttachmentHeight: -1,
+        lineTrailAttachmentHeight: -0.7,
         lineTrailEndFactor: 0.80,
         lineTrailLengthStart: -50,
         lineTrailLengthEnd: 0,
@@ -776,7 +777,8 @@ function createDebugGUI ()
         moon.scale.set(guiData.moonSize, guiData.moonSize, guiData.moonSize);
     });
     moonGUI.add(guiData, "moonRPM", -10, 10).name("rotations/minute");
-    moonGUI.add(guiData, "moonPositionY").name("Y position");
+    moonGUI.add(guiData, "moonPositionY").name("Y position end");
+    moonGUI.add(guiData, "moonStartPositionY").name("Y position start")
     moonGUI.add(guiData, "moonPositionZ").name("Z position");
     var lineTrailGUI = gui.addFolder("Line Trail");
     lineTrailGUI.add(guiData, "lineTrailWidth", 0, 1).name("width");
@@ -871,11 +873,13 @@ function update(deltaTime) {
         trail.visible = true;
         trail.scale.set(guiData.trailWidth, guiData.trailLengthStart, 1);
         lineTrail.visible = true;
+        moon.position.y = guiData.moonStartPositionY;
     }
     else {
         var f = (animationFactor - guiData.spaceshipStartMovingFactor)/(1 - guiData.spaceshipStartMovingFactor);
         arrow.position.y = THREE.MathUtils.lerp(guiData.spaceshipStartY, guiData.spaceshipEndY, easing.easeOutCubic(f));
         camera.position.y = THREE.MathUtils.lerp(guiData.cameraStartY, guiData.cameraEndY, easing.easeInOutSine(f));
+        moon.position.y = THREE.MathUtils.lerp(guiData.moonStartPositionY, guiData.moonPositionY, easing.easeOutCubic(f));
         
         var trailF = (animationFactor - guiData.spaceshipStartMovingFactor)/(guiData.trailEndFactor - guiData.spaceshipStartMovingFactor);
         if (trailF < 1) {
@@ -1015,7 +1019,6 @@ function update(deltaTime) {
     }
     
     //moon
-    moon.position.y = guiData.moonPositionY;
     moon.position.z = guiData.moonPositionZ;
     //var moonRotation = new THREE.Quaternion().setFromAxisAngle(new THREE.)
     var moonRotationAxis = new THREE.Vector3(0,1,1);
