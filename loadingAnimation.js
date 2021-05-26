@@ -80,7 +80,7 @@ function init() {
         trailRandomFactor: 0.5,
         trailEndFactor: 0.66,
         lineTrailWidth: 0.1,
-        lineTrailAttachmentHeight: 0,
+        lineTrailAttachmentHeight: -1,
         lineTrailEndFactor: 0.80,
         lineTrailLengthStart: -50,
         lineTrailLengthEnd: 0,
@@ -283,7 +283,7 @@ function init() {
                 let width = (1.0 - guiData.lineTrailRandomFactor + guiData.lineTrailRandomFactor * Math.random()) * guiData.lineTrailWidth;
                 // fromY is less than toY
                 lineTrail.scale.set(width, toY - fromY + width, 1);
-                lineTrail.position.setY(fromY - width * 0.5 - guiData.lineTrailAttachmentHeight);
+                lineTrail.position.setY(fromY - width * 0.5 + guiData.lineTrailAttachmentHeight);
                 
                 lineTrailMaterial.uniforms.ratio.value = lineTrail.scale.x / lineTrail.scale.y;
                 //console.log(lineTrailMaterial.uniforms.ratio.value);
