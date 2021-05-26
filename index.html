@@ -106,5 +106,59 @@
             gl_FragColor = vec4(color, 1.0 - t);
         }
     </script>
+    <script id="vertexLine" type="x-shader/x-vertex">
+        precision mediump float;
+    
+        varying vec2 customUv;
+    
+        void main(void) {
+            vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+            customUv = vec2(position.x, position.y);
+            
+            gl_Position = projectionMatrix * mvPosition;
+        }
+    </script>
+    <script id="fragmentLine" type="x-shader/x-fragment">
+        precision mediump float;
+    
+        uniform float ratio;
+        uniform vec3 color;
+        varying vec2 customUv;
+        
+        void main(void) {
+            
+            float roundRatio = ratio / 2.0;
+            
+            vec2 coord = vec2(customUv.x * 2.0, customUv.y);
+            float delta = 0.0085;
+            
+            if (customUv.y > roundRatio && customUv.y < 1.0 - roundRatio)
+            {
+                float a = min(1.0, max(0.0, (1.0 - abs(coord.x)) / delta));
+                gl_FragColor = vec4(color,a);
+                return;
+            }
+            
+            if (customUv.y < roundRatio) {
+                coord.y = 1.0 - customUv.y/roundRatio;
+            }
+            else if (customUv.y > 1.0 - roundRatio)
+            {
+                coord.y = customUv.y - (1.0 - roundRatio);
+                coord.y /= roundRatio;
+            }
+            
+            //coord.y /= ratio;
+            float r = length(coord);
+            if (r > 1.0) discard;
+            
+            if (r < 1.0 - delta)
+                gl_FragColor = vec4(color,1);
+            else {
+                float alpha = 1.0 - (r - (1.0 - delta))/delta;
+                gl_FragColor = vec4(color,alpha);
+            }
+        }
+    </script>
 </body>
 </html>

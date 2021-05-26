@@ -10,6 +10,8 @@ let canvas, stats, camera, scene, renderer, arrow, gui, guiData;
 let filesWaitingToLoad = 0;
 
 let trail, trailGeometry, trailMaterial;
+let lineTrail, lineTrailStart, lineTrailEnd, lineTrailMaterial;
+
 let logoPivot, logoGroup, logoMaterials = [];
 
 let holeOutlineMesh, rocks, wormholeLines = [];
@@ -77,6 +79,11 @@ function init() {
         trailWidth: 2,
         trailRandomFactor: 0.5,
         trailEndFactor: 0.66,
+        lineTrailWidth: 0.1,
+        lineTrailAttachmentHeight: 0,
+        lineTrailEndFactor: 0.80,
+        lineTrailLengthStart: -50,
+        lineTrailLengthEnd: 0,
         DEBUG_PLANE: false,
         DEBUG_RESIZABLE_WINDOW: true
     }
@@ -144,8 +151,6 @@ function init() {
     });
     const debugMaterial = new THREE.MeshBasicMaterial({color: 0xff00ff});
     const moonMaterial = new THREE.MeshBasicMaterial({map: null});
-
-    
 
     const textureLoader = new THREE.TextureLoader();
     textureLoader.load('res/option2_2kHeight.jpg', function (bgTexture) {
@@ -250,9 +255,42 @@ function init() {
             
             trail = new THREE.Mesh(trailGeometry, trailMaterial);// new THREE.LineSegments(trailGeometry, trailMaterial);
             trail.scale.set( 1, 10, 1 );
-            arrow.add(trail);
+            //arrow.add(trail);
             trail.position.y = -.5;
             
+            let lineTrailGeometry = new THREE.PlaneGeometry(1,1);
+            //lineTrailGeometry.rotateX(-Math.PI * 0.5);
+            lineTrailGeometry.translate(0,0.5,-1);
+            
+            lineTrailMaterial = new THREE.ShaderMaterial({
+                transparent: true,
+                uniforms: {
+                    ratio: {value: 1},
+                    color: {value: new THREE.Color(0x49FF5E)}
+                },
+                vertexShader: document.getElementById('vertexLine').textContent,
+                fragmentShader: document.getElementById( 'fragmentLine' ).textContent
+            });
+            lineTrail = new THREE.Mesh(lineTrailGeometry, lineTrailMaterial);
+            arrow.add(lineTrail);
+            lineTrail.update = function(fromY, toY) {
+                if (fromY > toY) {
+                    let y = toY;
+                    toY = fromY;
+                    fromY = y;
+                }
+                // fromY is less than toY
+                lineTrail.scale.set(guiData.lineTrailWidth, toY - fromY + guiData.lineTrailWidth, 1);
+                lineTrail.position.setY(fromY - guiData.lineTrailWidth * 0.5 - guiData.lineTrailAttachmentHeight);
+                
+                lineTrailMaterial.uniforms.ratio.value = lineTrail.scale.x / lineTrail.scale.y;
+                //console.log(lineTrailMaterial.uniforms.ratio.value);
+            }
+            
+            lineTrailStart = -3;
+            lineTrailEnd = -1;
+            
+            lineTrail.update(lineTrailStart, lineTrailEnd);
             
             filesWaitingToLoad--;
         }
@@ -738,7 +776,13 @@ function createDebugGUI ()
     moonGUI.add(guiData, "moonRPM", -10, 10).name("rotations/minute");
     moonGUI.add(guiData, "moonPositionY").name("Y position");
     moonGUI.add(guiData, "moonPositionZ").name("Z position");
-    var trailGUI = gui.addFolder("Trail");
+    var lineTrailGUI = gui.addFolder("Line Trail");
+    lineTrailGUI.add(guiData, "lineTrailWidth", 0, 10).name("width");
+    lineTrailGUI.add(guiData, "lineTrailAttachmentHeight", -10, 0).name("attached pos Y");
+    lineTrailGUI.add(guiData, "lineTrailEndFactor", 0, 1).name("end animation %");
+    lineTrailGUI.add(guiData, "lineTrailLengthStart", -500, 0).name("length start");
+    lineTrailGUI.add(guiData, "lineTrailLengthEnd", -500, 0).name("length end");
+    var trailGUI = gui.addFolder("OLD Trail");
     trailGUI.add(guiData, "trailWidth", 0, 10).name("max width");
     trailGUI.add(guiData, "trailRandomFactor", 0, 1).name("random width %");
     trailGUI.add(guiData, "trailLengthStart", 0, 100).name("length start");
@@ -823,6 +867,7 @@ function update(deltaTime) {
         
         trail.visible = true;
         trail.scale.set(guiData.trailWidth, guiData.trailLengthStart, 1);
+        lineTrail.visible = true;
     }
     else {
         var f = (animationFactor - guiData.spaceshipStartMovingFactor)/(1 - guiData.spaceshipStartMovingFactor);
@@ -835,8 +880,22 @@ function update(deltaTime) {
             let trailFixedFactor = 1 - guiData.trailRandomFactor;
             trail.scale.set(Math.random() * guiData.trailWidth * guiData.trailRandomFactor + guiData.trailWidth * trailFixedFactor, THREE.MathUtils.lerp(guiData.trailLengthStart, guiData.trailLengthEnd, easing.easeInCubic(trailF)), 1);
         }
-        else 
+        else {
             trail.visible = false;
+        }
+        
+        var lineF = (animationFactor - guiData.spaceshipStartMovingFactor)/(guiData.lineTrailEndFactor - guiData.spaceshipStartMovingFactor);
+        if (lineF < 1) {
+            lineTrail.visible = true;
+            
+            lineTrailStart = THREE.Math.lerp(guiData.lineTrailLengthStart, guiData.lineTrailLengthEnd, easing.easeOutCubic(lineF));
+            lineTrailEnd = 0;
+            
+            lineTrail.update(lineTrailStart, lineTrailEnd);
+        }
+        else {
+            lineTrail.visible = false;
+        }
     }
     
     if (guiData.cameraDoTilt) {
@@ -967,6 +1026,9 @@ function update(deltaTime) {
         if (i % 2 == 0) r = -r;
         wormholeLines[i].quaternion.setFromAxisAngle(wormholeAxis, r);
     }
+    
+    // linetrail
+    lineTrail.update(lineTrailStart, lineTrailEnd);
 }
 
 function restart() {
