@@ -63,6 +63,8 @@ function init() {
         piecesVerticalMovementFactor: 96,
         startBreakingTime: 0.05,
         endBreakingTime: 0.25,
+        piecesPostBreakStay: 0.7,
+        piecesPostBreakAmount: 0.03,
         logoFadeinStart: 1,
         logoFadeinEnd: 1.3,
         moonSize: 22,
@@ -95,8 +97,8 @@ function init() {
     canvas = document.querySelector('#c');
     renderer = new THREE.WebGL1Renderer({
         canvas: canvas,
-        alpha: true
-        //antialias: true
+        alpha: true,
+        antialias: true
     });
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -769,6 +771,8 @@ function createDebugGUI ()
     });
     holeGUI.add(guiData, "startBreakingTime", 0, 1).name("startBreakAnim %").onChange(restart);
     holeGUI.add(guiData, "endBreakingTime", 0, 1).name("endBreakAnim %").onChange(restart);
+    holeGUI.add(guiData, "piecesPostBreakStay").name("Stay-time before explosion");
+    holeGUI.add(guiData, "piecesPostBreakAmount").name("Amount of shake before explosion");
     holeGUI.add(guiData, "wormholeRotationSpeed").name("lines rotation speed");
     holeGUI.add(guiData, "wormholeFallingSpeed").name("circles falling speed");
     var rocksGUI = gui.addFolder("Rocks");
@@ -949,6 +953,19 @@ function update(deltaTime) {
         if (p.moving)
         {
             movingPieces++;
+
+            if (p.staticTime > 0) {
+                p.staticTime -= deltaTime;
+                let progress = Math.min(1, Math.max(0, (guiData.piecesPostBreakStay - p.staticTime) / guiData.piecesPostBreakAmount));
+                
+                p.object3D.position.copy(p.originalPosition);
+                var translation = new THREE.Vector3().copy(p.velocity).multiplyScalar(p.speed * progress * guiData.piecesPostBreakAmount);
+                p.object3D.position.add(translation);
+                p.object3D.quaternion.copy(new THREE.Quaternion().setFromAxisAngle(p.rotationAxis, p.rotationSpeed * progress * guiData.piecesPostBreakAmount));
+
+                continue;
+            }
+
             p.speed = moveTowards(p.speed, 0, deltaTime * guiData.piecesSpeedFriction);
             p.rotationSpeed = moveTowards(p.rotationSpeed, 0, deltaTime * guiData.piecesRotationFriction);
             
@@ -1005,7 +1022,9 @@ function update(deltaTime) {
         }
         else if (!p.showingOutline) {
             p.staticTime -= deltaTime;
-            if (p.staticTime < 0) p.showOutline(true);
+            if (p.staticTime < 0) {
+                p.showOutline(true);
+            }
         }
         else visiblePieces++;
     }
@@ -1015,7 +1034,9 @@ function update(deltaTime) {
     {
         for (let i = 0; i < pieces.length; ++i)
         {
-            pieces[i].setMoving(true);
+            let p = pieces[i];
+            p.staticTime = guiData.piecesPostBreakStay;
+            p.setMoving(true);
         }
     }
     holeOutlineMesh.visible = allPiecesOutlined || movingPieces == pieces.length;
