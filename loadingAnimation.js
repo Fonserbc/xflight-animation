@@ -156,7 +156,7 @@ function init() {
     const moonMaterial = new THREE.MeshBasicMaterial({map: null});
 
     const textureLoader = new THREE.TextureLoader();
-    textureLoader.load('res/option2_2kHeight.jpg', function (bgTexture) {
+    textureLoader.load('https://xflight-main.s3-us-west-1.amazonaws.com/assets/public/2021options-04.jpg', function (bgTexture) {
         
         bgTexture.wrapS = THREE.MirroredRepeatWrapping;
         bgTexture.wrapT = THREE.MirroredRepeatWrapping;
