@@ -14,7 +14,7 @@ let lineTrail, lineTrailStart, lineTrailEnd, lineTrailMaterial;
 
 let logoPivot, logoGroup, logoMaterials = [];
 
-let holeOutlineMesh, rocks, wormholeLines = [];
+let holeOutlineMesh, rocks, wormholeLines = [], wormholeCircles = [], distanceBetweenCircles, circleRadiusMax, circleRadiusMin, numberOfCircles;
 let pieces = [];
 let sortedPieces = [];
 
@@ -47,8 +47,8 @@ function init() {
         totalAnimationTime: 10,
         cameraStartY: 7,
         cameraDistanceZ: 25,
-        cameraEndY: 20,
-        cameraFOV: 50,
+        cameraEndY: 17,
+        cameraFOV: 55,
         cameraStartLookingAtShipFactor: 0.3,
         cameraStartLookingAtHeight: 5,
         cameraDoTilt: false,
@@ -74,7 +74,8 @@ function init() {
         moonGravity: 1000000,
         collideMoon: false,
         collisionBounciness: 0.3,
-        wormholeRotationSpeed: 1,
+        wormholeRotationSpeed: 0,
+        wormholeFallingSpeed: 20,
         trailLengthStart: 6,
         trailLengthEnd: 200,
         trailWidth: 2,
@@ -181,7 +182,7 @@ function init() {
     
     // logo
     logoPivot = new THREE.Object3D();
-    logoPivot.position.y = guiData.spaceshipEndY;
+    logoPivot.position.y = guiData.spaceshipEndY + 0.12;
     scene.add(logoPivot);
 
     // SVGs
@@ -591,10 +592,10 @@ function init() {
             
             // Wormhole
             const circleSegments = 18;
-            const numberOfCircles = 10;
-            const circleRadiusMax = (rocks.boundingBox.max.x - rocks.boundingBox.min.x) * 0.25;
-            const circleRadiusMin = circleRadiusMax * 0.3;
-            const distanceBetweenCircles = circleRadiusMax * 0.1;
+            numberOfCircles = 10;
+            circleRadiusMax = (rocks.boundingBox.max.x - rocks.boundingBox.min.x) * 0.25;
+            circleRadiusMin = circleRadiusMax * 0.3;
+            distanceBetweenCircles = circleRadiusMax * 0.1;
             var rocksCenter = new THREE.Vector3();
             //rocks.boundingBox.getCenter(rocksCenter);
             
@@ -607,13 +608,24 @@ function init() {
                 for (let j = 0; j < circleSegments + 1; ++j)
                 {
                     var angle = j * Math.PI * 2 / circleSegments;
-                    points.push(new THREE.Vector3(Math.cos(angle) * radius, depth, Math.sin(angle) * radius).add(rocksCenter));
+                    points.push(new THREE.Vector3(Math.cos(angle), 0, Math.sin(angle)).add(rocksCenter));
                 }
                 const wormholeGeometry = new THREE.BufferGeometry().setFromPoints( points );
-                const line = new THREE.Line( wormholeGeometry, wormlinesMaterial );
+                const circle = new THREE.Line( wormholeGeometry, wormlinesMaterial );
+                circle.scale.set(radius, radius, radius);
+                circle.position.setY(depth);
+                wormholeCircles.push(circle);
                 
+                // Correct points for later use on vertical lines
+                for (let j = 0; j < circleSegments + 1; ++j)
+                {
+                    points[j].setX(points[j].x * radius);
+                    points[j].setZ(points[j].z * radius);
+                    points[j].setY(depth);
+                }
+
                 allCirclePoints.push(points);
-                rocks.add(line);
+                rocks.add(circle);
             }
             
             const verticalLineEveryN = 1;
@@ -758,6 +770,7 @@ function createDebugGUI ()
     holeGUI.add(guiData, "startBreakingTime", 0, 1).name("startBreakAnim %").onChange(restart);
     holeGUI.add(guiData, "endBreakingTime", 0, 1).name("endBreakAnim %").onChange(restart);
     holeGUI.add(guiData, "wormholeRotationSpeed").name("lines rotation speed");
+    holeGUI.add(guiData, "wormholeFallingSpeed").name("circles falling speed");
     var rocksGUI = gui.addFolder("Rocks");
     rocksGUI.add(guiData, "piecesSpeed").name("translation speed").onChange(restart);
     rocksGUI.add(guiData, "piecesRotationSpeed", 0, 50).name("rotation speed").onChange(restart);
@@ -963,7 +976,7 @@ function update(deltaTime) {
             
             p.object3D.position.add(translation);
             
-            if (p.object3D.position.z * rocks.scale.z > camera.position.z)
+            if (p.object3D.position.z * rocks.scale.z > camera.position.z - 2)
             {
                 p.velocity.setZ(-Math.abs(p.velocity.z));
             }
@@ -1031,6 +1044,20 @@ function update(deltaTime) {
         var r = animationTime * (i + 1)/wormholeLines.length * Math.PI * guiData.wormholeRotationSpeed;
         if (i % 2 == 0) r = -r;
         wormholeLines[i].quaternion.setFromAxisAngle(wormholeAxis, r);
+    }
+
+    // Wormhole circles
+    let holeDepth = animationTime * guiData.wormholeFallingSpeed;
+    let holeFactor = holeDepth / distanceBetweenCircles;
+    holeFactor = holeFactor - Math.floor(holeFactor);
+    //console.log(holeDepth + " / "+distanceBetweenCircles, holeFactor);
+
+    for (let i = 0; i < wormholeCircles.length; ++i)
+    {
+        const depth = (-i - 1 - holeFactor) * distanceBetweenCircles;
+        const radius = THREE.MathUtils.lerp(circleRadiusMax, circleRadiusMin, easing.easeOutQuad((i + holeFactor) / (numberOfCircles - 1)));
+        wormholeCircles[i].scale.set(radius,radius,radius);
+        wormholeCircles[i].position.setY(depth);
     }
     
     // linetrail
