@@ -22,6 +22,11 @@ let moon;
 
 let animationTime = 0;
 let DEBUG_plane;
+let cameraShakingAmount = 0;
+let framesSinceShake = 100;
+let cameraShakeRandomDisplacement = new THREE.Vector3();
+let cameraShakeCurrentDisplacement = new THREE.Vector3();
+let rockCrashed = false;
 
 var moveTowards = function(from, to, delta)
 {
@@ -52,6 +57,9 @@ function init() {
         cameraStartLookingAtShipFactor: 0.3,
         cameraStartLookingAtHeight: 5,
         cameraDoTilt: false,
+        cameraShakeIntensity: 1.6,
+        cameraShakeDecay: 0.67,
+        cameraShakeSpeed: 12,
         spaceshipStartY: -10,
         spaceshipEndY: 20,
         spaceshipStartMovingFactor: 0.25,
@@ -63,7 +71,7 @@ function init() {
         piecesVerticalMovementFactor: 96,
         startBreakingTime: 0.05,
         endBreakingTime: 0.25,
-        piecesPostBreakStay: 0.7,
+        piecesPostBreakStay: 0,
         piecesPostBreakAmount: 0.03,
         logoFadeinStart: 1,
         logoFadeinEnd: 1.3,
@@ -170,7 +178,7 @@ function init() {
     });
     filesWaitingToLoad++;
     
-    textureLoader.load('res/moontexture-1024h.jpg', function (texture) {
+    textureLoader.load('res/moontexture-greenhue-2048h.jpg', function (texture) {
         moonMaterial.map = texture;
         //console.log("loaded moon", moonMaterial, texture);
     });
@@ -694,10 +702,10 @@ function init() {
                 logoMaterials.push(material);
                 const shapes = SVGLoader.createShapes( path );
                 for ( let j = 0; j < shapes.length; j ++ ) {
-                    if (i == 2 && j == 31) continue; // Arrow
+                    if (i == 32 && j == 0) continue; // Arrow
                     const shape = shapes[ j ];
                     const geometry = new THREE.ShapeGeometry( shape );
-                    //console.log(j, geometry.attributes.position.array.length);
+                    //console.log(j, geometry.attributes.position.array.length / 3);
                     
                     if (i == 2 && j < 23 && false) { // stars
                         const mesh = new THREE.Mesh(geometry, starMaterial);
@@ -760,6 +768,9 @@ function createDebugGUI ()
     cameraGUI.add(guiData, "cameraDoTilt").name("tilt camera");
     cameraGUI.add(guiData, "cameraStartLookingAtShipFactor", 0, 1).name("lookAtShipStartAnim %");
     cameraGUI.add(guiData, "cameraStartLookingAtHeight").name("Start lookAt height");
+    cameraGUI.add(guiData, "cameraShakeIntensity").name("Camera shake intensity");
+    cameraGUI.add(guiData, "cameraShakeDecay").name("Camera shake decay speed");
+    cameraGUI.add(guiData, "cameraShakeSpeed").name("Camera shake speed");
     var spaceshipGUI = gui.addFolder("Spaceship");
     spaceshipGUI.add(guiData, "spaceshipStartY").name("start Y position");
     spaceshipGUI.add(guiData, "spaceshipEndY").name("end Y position");
@@ -883,6 +894,9 @@ function update(deltaTime) {
     const unclampedAnimationFactor = animationTime / guiData.totalAnimationTime;
     const animationFactor = Math.max(0, Math.min(1, unclampedAnimationFactor));
 
+    camera.position.x = 0;
+    camera.position.z = guiData.cameraDistanceZ;
+
     if (animationFactor < guiData.spaceshipStartMovingFactor) {
         arrow.position.y = guiData.spaceshipStartY;
         camera.position.y = guiData.cameraStartY;
@@ -940,7 +954,37 @@ function update(deltaTime) {
     else {
         camera.quaternion.identity();
     }
+
+    // Shaking
+    let END_BREAKING_TIME = guiData.endBreakingTime * guiData.totalAnimationTime;
+    if (animationTime < END_BREAKING_TIME)
+    {
+        cameraShakingAmount = animationTime / END_BREAKING_TIME;
+        cameraShakingAmount = easing.easeInCubic(cameraShakingAmount);
+    }
+    else {
+        cameraShakingAmount = Math.max(0, cameraShakingAmount - guiData.cameraShakeDecay * deltaTime);
+    }
+
+    if (cameraShakingAmount > 0)
+    {
+        framesSinceShake++;
+        let framesBetweenShakes = 1 / cameraShakingAmount;
+
+        if (framesSinceShake >= framesBetweenShakes)
+        {
+            cameraShakeRandomDisplacement = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize().multiplyScalar(guiData.cameraShakeIntensity);
+        }
+
+        cameraShakeCurrentDisplacement = new THREE.Vector3().copy(cameraShakeCurrentDisplacement).lerp(cameraShakeRandomDisplacement, deltaTime * guiData.cameraShakeSpeed);
+        camera.position.add(new THREE.Vector3().copy(cameraShakeCurrentDisplacement).multiplyScalar(cameraShakingAmount));
+    }
+    else {
+        cameraShakeRandomDisplacement.set(0,0,0);
+    }
+
     
+    //
     arrow.quaternion.copy(camera.quaternion);
     
     var visiblePieces = 0;
@@ -993,9 +1037,14 @@ function update(deltaTime) {
             
             p.object3D.position.add(translation);
             
-            if (p.object3D.position.z * rocks.scale.z > camera.position.z - 2)
+            if (p.velocity.z > 0 && p.object3D.position.z * rocks.scale.z > camera.position.z - 2)
             {
                 p.velocity.setZ(-Math.abs(p.velocity.z));
+                //console.log(i);
+                if (!rockCrashed && i == 17) { // 17 is the one hitting the camera
+                    cameraShakingAmount = 0.5;
+                    rockCrashed = true;
+                }
             }
             
             if (guiData.collideMoon)
@@ -1095,7 +1144,8 @@ function restart() {
     
     arrow.position.y = guiData.spaceshipStartY;
     
-    logoPivot.position.y = guiData.spaceshipEndY;
+    logoPivot.position.y = guiData.spaceshipEndY + 0.12;
+    rockCrashed = false;
 }
 
 canvas.addEventListener("mousedown", restart);
