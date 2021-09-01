@@ -5,7 +5,7 @@ import { SVGLoader } from "./lib/SVGLoader.js";
 import { GUI } from "./lib/dat.gui.js";
 import Stats from "./lib/stats.js";
 import easing from "./lib/easings.js";
-import noise from "./lib/perlin.js";
+//import noise from "./lib/perlin.js";
 
 let canvas, stats, camera, scene, renderer, arrow, gui, guiData;
 let filesWaitingToLoad = 0;
@@ -977,9 +977,14 @@ function update(deltaTime) {
         let eulerAngles = new THREE.Euler();
         let intensity_sq = cameraShakeIntensity * cameraShakeIntensity;
         let t = animationTime * guiData.cameraShakeSpeed;
-        eulerAngles.x = intensity_sq * guiData.cameraShakePitch * 0.0174533 * 2 * (noise.simplex2(cameraShakeSeed, t) - 0.5); // deg to rad = 0.0174533
-        eulerAngles.y = intensity_sq * guiData.cameraShakeYaw * 0.0174533 * 2 * (noise.simplex2(cameraShakeSeed + 1, t) - 0.5);
-        eulerAngles.z = intensity_sq * guiData.cameraShakeRoll * 0.0174533 * 2 * (noise.simplex2(cameraShakeSeed + 2, t) - 0.5);
+        
+        eulerAngles.x = intensity_sq * guiData.cameraShakePitch * 0.0174533 * (Math.sin(t) + Math.sin(t * 3) * 0.5); // deg to rad = 0.0174533
+        eulerAngles.y = intensity_sq * guiData.cameraShakeYaw * 0.0174533 * (Math.cos(t) + Math.sin(t * 4) * 0.5);
+        eulerAngles.z = intensity_sq * guiData.cameraShakeRoll * 0.0174533 * Math.sin(t *0.5 + 2);
+
+        //eulerAngles.x = intensity_sq * guiData.cameraShakePitch * 0.0174533 * 2 * (noise.simplex2(cameraShakeSeed, t) - 0.5); // deg to rad = 0.0174533
+        //eulerAngles.y = intensity_sq * guiData.cameraShakeYaw * 0.0174533 * 2 * (noise.simplex2(cameraShakeSeed + 1, t) - 0.5);
+        //eulerAngles.z = intensity_sq * guiData.cameraShakeRoll * 0.0174533 * 2 * (noise.simplex2(cameraShakeSeed + 2, t) - 0.5);
 
         camera.quaternion.setFromEuler(eulerAngles);
     }
