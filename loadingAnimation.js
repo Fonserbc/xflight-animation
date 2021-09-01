@@ -494,16 +494,16 @@ function init() {
                         var crackPositions = [];
                         
                         crackPositions.push(geometry.attributes.position.array[prevVertex * 3]);
-                        crackPositions.push(geometry.attributes.position.array[prevVertex * 3 + 1] + OUTLINE_DISPLACEMENT);
+                        crackPositions.push(geometry.attributes.position.array[prevVertex * 3 + 1] + (pieces.length == 17? 0 : OUTLINE_DISPLACEMENT));
                         crackPositions.push(geometry.attributes.position.array[prevVertex * 3 + 2]);
                         
                         crackPositions.push(geometry.attributes.position.array[vertexClosestToCenter * 3]);
-                        crackPositions.push(geometry.attributes.position.array[vertexClosestToCenter * 3 + 1] + OUTLINE_DISPLACEMENT);
+                        crackPositions.push(geometry.attributes.position.array[vertexClosestToCenter * 3 + 1] + (pieces.length == 17? 0 : OUTLINE_DISPLACEMENT));
                         crackPositions.push(geometry.attributes.position.array[vertexClosestToCenter * 3 + 2]);
                         
                         if (sqDistance < 1000) { // hand picked number
                             crackPositions.push(geometry.attributes.position.array[nextVertex * 3]);
-                            crackPositions.push(geometry.attributes.position.array[nextVertex * 3 + 1] + OUTLINE_DISPLACEMENT);
+                            crackPositions.push(geometry.attributes.position.array[nextVertex * 3 + 1] + (pieces.length == 17? 0 : OUTLINE_DISPLACEMENT));
                             crackPositions.push(geometry.attributes.position.array[nextVertex * 3 + 2]);
                         }
                         
@@ -517,7 +517,7 @@ function init() {
                         var outlinePositions = [];
                         for (let x = 0; x < vertexCount * 3; ++x) // This is set by hand
                         {
-                            if (x % 3 == 1) outlinePositions.push(geometry.attributes.position.array[x] + OUTLINE_DISPLACEMENT); // for zfighting
+                            if (x % 3 == 1) outlinePositions.push(geometry.attributes.position.array[x] + (pieces.length == 17? 0 : OUTLINE_DISPLACEMENT)); // for zfighting
                             else outlinePositions.push(geometry.attributes.position.array[x]);
                         }
                         const outlineGeometry = new THREE.BufferGeometry();
@@ -529,7 +529,7 @@ function init() {
                         outlinePositions = [];
                         for (let x = 0; x < vertexCount * 3; ++x) // This is set by hand
                         {
-                            if (x % 3 == 1) outlinePositions.push(geometry.attributes.position.array[x + vertexCount * 2 * 3] - OUTLINE_DISPLACEMENT); // for zfighting
+                            if (x % 3 == 1) outlinePositions.push(geometry.attributes.position.array[x + vertexCount * 2 * 3] + (pieces.length == 17? 0 : -OUTLINE_DISPLACEMENT)); // for zfighting
                             else outlinePositions.push(geometry.attributes.position.array[x + vertexCount * 2 * 3]);
                         }
                         const outlineGeometryUnder = new THREE.BufferGeometry();
