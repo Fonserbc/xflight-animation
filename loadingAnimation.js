@@ -22,10 +22,8 @@ let moon;
 
 let animationTime = 0;
 let DEBUG_plane;
-let cameraShakingAmount = 0;
-let framesSinceShake = 100;
-let cameraShakeRandomDisplacement = new THREE.Vector3();
-let cameraShakeCurrentDisplacement = new THREE.Vector3();
+let cameraShakeIntensity = 0;
+let cameraShakeSeed = Math.random();
 let rockCrashed = false;
 
 var moveTowards = function(from, to, delta)
@@ -57,9 +55,12 @@ function init() {
         cameraStartLookingAtShipFactor: 0.3,
         cameraStartLookingAtHeight: 5,
         cameraDoTilt: false,
-        cameraShakeIntensity: 1.6,
-        cameraShakeDecay: 0.67,
-        cameraShakeSpeed: 12,
+        cameraShakePitch: 3,
+        cameraShakeRoll: 2,
+        cameraShakeYaw: 2,
+        cameraShakeDecay: 0.49,
+        cameraShakeSpeed: 8,
+        cameraShakeStart: 0.5,
         spaceshipStartY: -10,
         spaceshipEndY: 20,
         spaceshipStartMovingFactor: 0.25,
@@ -768,9 +769,12 @@ function createDebugGUI ()
     cameraGUI.add(guiData, "cameraDoTilt").name("tilt camera");
     cameraGUI.add(guiData, "cameraStartLookingAtShipFactor", 0, 1).name("lookAtShipStartAnim %");
     cameraGUI.add(guiData, "cameraStartLookingAtHeight").name("Start lookAt height");
-    cameraGUI.add(guiData, "cameraShakeIntensity").name("Camera shake intensity");
+    cameraGUI.add(guiData, "cameraShakeStart").name("Camera shake start % of breaking animation");
+    cameraGUI.add(guiData, "cameraShakePitch", 0, 15).name("max shake Pitch");
+    cameraGUI.add(guiData, "cameraShakeRoll", 0, 15).name("max shake Roll");
+    cameraGUI.add(guiData, "cameraShakeYaw", 0, 15).name("max shake Yaw");
     cameraGUI.add(guiData, "cameraShakeDecay").name("Camera shake decay speed");
-    cameraGUI.add(guiData, "cameraShakeSpeed").name("Camera shake speed");
+    cameraGUI.add(guiData, "cameraShakeSpeed").name("Camera shake frequency");
     var spaceshipGUI = gui.addFolder("Spaceship");
     spaceshipGUI.add(guiData, "spaceshipStartY").name("start Y position");
     spaceshipGUI.add(guiData, "spaceshipEndY").name("end Y position");
@@ -957,30 +961,29 @@ function update(deltaTime) {
 
     // Shaking
     let END_BREAKING_TIME = guiData.endBreakingTime * guiData.totalAnimationTime;
-    if (animationTime < END_BREAKING_TIME)
+    let shakeStartTime = guiData.cameraShakeStart * END_BREAKING_TIME;
+    if (shakeStartTime <= animationTime && animationTime < END_BREAKING_TIME)
     {
-        cameraShakingAmount = animationTime / END_BREAKING_TIME;
-        cameraShakingAmount = easing.easeInCubic(cameraShakingAmount);
+        cameraShakeIntensity = (animationTime - shakeStartTime) / (END_BREAKING_TIME - shakeStartTime);
+        cameraShakeIntensity = easing.easeInCubic(cameraShakeIntensity);
     }
     else {
-        cameraShakingAmount = Math.max(0, cameraShakingAmount - guiData.cameraShakeDecay * deltaTime);
+        cameraShakeIntensity = Math.max(0, cameraShakeIntensity - guiData.cameraShakeDecay * deltaTime);
     }
 
-    if (cameraShakingAmount > 0)
+    if (cameraShakeIntensity > 0)
     {
-        framesSinceShake++;
-        let framesBetweenShakes = 1 / cameraShakingAmount;
+        let eulerAngles = new THREE.Euler();
+        let intensity_sq = cameraShakeIntensity * cameraShakeIntensity;
+        let t = animationTime * guiData.cameraShakeSpeed;
+        eulerAngles.x = intensity_sq * guiData.cameraShakePitch * 0.0174533 * 2 * (noise.simplex2(cameraShakeSeed, t) - 0.5); // deg to rad = 0.0174533
+        eulerAngles.y = intensity_sq * guiData.cameraShakeYaw * 0.0174533 * 2 * (noise.simplex2(cameraShakeSeed + 1, t) - 0.5);
+        eulerAngles.z = intensity_sq * guiData.cameraShakeRoll * 0.0174533 * 2 * (noise.simplex2(cameraShakeSeed + 2, t) - 0.5);
 
-        if (framesSinceShake >= framesBetweenShakes)
-        {
-            cameraShakeRandomDisplacement = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize().multiplyScalar(guiData.cameraShakeIntensity);
-        }
-
-        cameraShakeCurrentDisplacement = new THREE.Vector3().copy(cameraShakeCurrentDisplacement).lerp(cameraShakeRandomDisplacement, deltaTime * guiData.cameraShakeSpeed);
-        camera.position.add(new THREE.Vector3().copy(cameraShakeCurrentDisplacement).multiplyScalar(cameraShakingAmount));
+        camera.quaternion.setFromEuler(eulerAngles);
     }
     else {
-        cameraShakeRandomDisplacement.set(0,0,0);
+        camera.quaternion.identity();
     }
 
     
@@ -1042,7 +1045,7 @@ function update(deltaTime) {
                 p.velocity.setZ(-Math.abs(p.velocity.z));
                 //console.log(i);
                 if (!rockCrashed && i == 17) { // 17 is the one hitting the camera
-                    cameraShakingAmount = 0.5;
+                    cameraShakeIntensity = 0.5;
                     rockCrashed = true;
                 }
             }
