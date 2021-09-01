@@ -5,6 +5,7 @@ import { SVGLoader } from "./lib/SVGLoader.js";
 import { GUI } from "./lib/dat.gui.js";
 import Stats from "./lib/stats.js";
 import easing from "./lib/easings.js";
+import noise from "./lib/perlin.js";
 
 let canvas, stats, camera, scene, renderer, arrow, gui, guiData;
 let filesWaitingToLoad = 0;
