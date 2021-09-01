@@ -43,7 +43,7 @@
     </script>
     <script id="fragmentShaderPieces" type="x-shader/x-fragment">
         #extension GL_OES_standard_derivatives : enable
-        precision mediump float;
+        precision highp float;
     
         uniform sampler2D bgTexture;
         uniform float textureRatio;
@@ -52,6 +52,11 @@
         
         //varying vec3 vNormal;
         varying vec3 vPos;
+
+        bool isnan(float val)
+        {
+            return ( val < 0.0 || 0.0 < val || val == 0.0 ) ? false : true;
+        }
         
         void main(void) {
             
@@ -59,6 +64,7 @@
             
             vec3 fdx = vec3(dFdx(vPos.x),dFdx(vPos.y),dFdx(vPos.z));
             vec3 fdy = vec3(dFdy(vPos.x),dFdy(vPos.y),dFdy(vPos.z));
+                
             vec3 N = normalize(cross(fdx,fdy));
             
             vec3 normal = N;//normalize(vNormal);//N;//normalize(vNormal);
@@ -79,6 +85,7 @@
             //float shine = shiningFactor * shiningFactor * shiningFactor * shiningFactor * 0.05;
             
             gl_FragColor = vec4(texture2D(bgTexture, coord).rgb, 1);//, 1);// + 
+            //gl_FragColor = vec4(vec3(1,0,0), 1);//, 1);// + 
         }
     </script>
     <script id="vertexTrail" type="x-shader/x-vertex">

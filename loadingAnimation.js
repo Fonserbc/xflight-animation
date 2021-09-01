@@ -5,7 +5,7 @@ import { SVGLoader } from "./lib/SVGLoader.js";
 import { GUI } from "./lib/dat.gui.js";
 import Stats from "./lib/stats.js";
 import easing from "./lib/easings.js";
-//import noise from "./lib/perlin.js";
+import noise from "./lib/perlin.js";
 
 let canvas, stats, camera, scene, renderer, arrow, gui, guiData;
 let filesWaitingToLoad = 0;
@@ -108,10 +108,12 @@ function init() {
     renderer = new THREE.WebGL1Renderer({
         canvas: canvas,
         alpha: true,
-        antialias: true
+        extensions: {'OES_standard_derivatives': true}
+        //antialias: true
     });
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.getContext().getExtension('OES_standard_derivatives');
     document.body.appendChild(renderer.domElement);
 
     stats = new Stats();
@@ -149,13 +151,14 @@ function init() {
         //side: THREE.DoubleSide,
         uniforms: {
             screenRatio: { value: window.innerWidth / window.innerHeight},
-            textureRatio: {value: 1.4145 }, // TODO update this ratio if we change the BG image
+            textureRatio: {value: 1.7777 }, // TODO update this ratio if we change the BG image
             bgTexture: {value: null}
         },
         vertexShader: document.getElementById( 'vertexShaderPieces' ).textContent,
         fragmentShader: document.getElementById( 'fragmentShaderPieces' ).textContent,
         extensions: {derivatives: true}
     });
+
     const wormlinesMaterial = new THREE.LineBasicMaterial({
         color: 0x49FF5E,
         linewidth: 3
@@ -168,7 +171,7 @@ function init() {
     const moonMaterial = new THREE.MeshBasicMaterial({map: null});
 
     const textureLoader = new THREE.TextureLoader();
-    textureLoader.load('https://xflight-main.s3-us-west-1.amazonaws.com/assets/public/2021options-04.jpg', function (bgTexture) {
+    textureLoader.load('res/2021option_resized.jpg', function (bgTexture) {
         
         bgTexture.wrapS = THREE.MirroredRepeatWrapping;
         bgTexture.wrapT = THREE.MirroredRepeatWrapping;
@@ -183,7 +186,9 @@ function init() {
     textureLoader.load('res/moontexture-greenhue-2048h.jpg', function (texture) {
         moonMaterial.map = texture;
         //console.log("loaded moon", moonMaterial, texture);
+        filesWaitingToLoad--;
     });
+    filesWaitingToLoad++;
     
     // moon
     moon = new THREE.Mesh(new THREE.SphereGeometry(1,32,32), moonMaterial);
@@ -865,6 +870,7 @@ function resizeRendererToDisplaySize(renderer) {
         renderer.setSize(window.innerWidth, window.innerHeight);
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
+        piecesMaterial.uniforms.screenRatio.value = width / height;
     }
     return needResize;
 }
@@ -978,13 +984,13 @@ function update(deltaTime) {
         let intensity_sq = cameraShakeIntensity * cameraShakeIntensity;
         let t = animationTime * guiData.cameraShakeSpeed;
         
-        eulerAngles.x = intensity_sq * guiData.cameraShakePitch * 0.0174533 * (Math.sin(t) + Math.sin(t * 3) * 0.5); // deg to rad = 0.0174533
-        eulerAngles.y = intensity_sq * guiData.cameraShakeYaw * 0.0174533 * (Math.cos(t) + Math.sin(t * 4) * 0.5);
-        eulerAngles.z = intensity_sq * guiData.cameraShakeRoll * 0.0174533 * Math.sin(t *0.5 + 2);
+        //eulerAngles.x = intensity_sq * guiData.cameraShakePitch * 0.0174533 * (Math.sin(t) + Math.sin(t * 3) * 0.5); // deg to rad = 0.0174533
+        //eulerAngles.y = intensity_sq * guiData.cameraShakeYaw * 0.0174533 * (Math.cos(t) + Math.sin(t * 4) * 0.5);
+        //eulerAngles.z = intensity_sq * guiData.cameraShakeRoll * 0.0174533 * Math.sin(t *0.5 + 2);
 
-        //eulerAngles.x = intensity_sq * guiData.cameraShakePitch * 0.0174533 * 2 * (noise.simplex2(cameraShakeSeed, t) - 0.5); // deg to rad = 0.0174533
-        //eulerAngles.y = intensity_sq * guiData.cameraShakeYaw * 0.0174533 * 2 * (noise.simplex2(cameraShakeSeed + 1, t) - 0.5);
-        //eulerAngles.z = intensity_sq * guiData.cameraShakeRoll * 0.0174533 * 2 * (noise.simplex2(cameraShakeSeed + 2, t) - 0.5);
+        eulerAngles.x = intensity_sq * guiData.cameraShakePitch * 0.0174533 * 2 * (noise.simplex2(cameraShakeSeed, t) - 0.5); // deg to rad = 0.0174533
+        eulerAngles.y = intensity_sq * guiData.cameraShakeYaw * 0.0174533 * 2 * (noise.simplex2(cameraShakeSeed + 1, t) - 0.5);
+        eulerAngles.z = intensity_sq * guiData.cameraShakeRoll * 0.0174533 * 2 * (noise.simplex2(cameraShakeSeed + 2, t) - 0.5);
 
         camera.quaternion.setFromEuler(eulerAngles);
     }
