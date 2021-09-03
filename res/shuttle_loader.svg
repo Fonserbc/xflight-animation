@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!-- Created with Keyshape -->
-<svg xmlns="http://www.w3.org/2000/svg" shape-rendering="geometricPrecision" text-rendering="geometricPrecision" viewBox="0 0 150 150" style="white-space: pre; background: #000000;">
+<svg xmlns="http://www.w3.org/2000/svg" shape-rendering="geometricPrecision" text-rendering="geometricPrecision" viewBox="0 0 150 150" style="white-space: pre; background: rgba(0,0,0,0.00);">
     <title/>
     <g id="Ship" transform="translate(132,75) translate(0,0) scale(-0.5,-0.5) translate(-26.0175,-27.622)">
         <path fill="#FFFFFF" d="M52.035,55.244L25.898,42.047L0,55.244L25.858,0Z" transform="translate(26.0175,27.622) translate(-26.0175,-27.622)"/>
