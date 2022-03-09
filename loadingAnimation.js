@@ -48,12 +48,12 @@ function init() {
 
     guiData = {
         spaceshipLogoSize: 1,
-        totalAnimationTime: 10,
+        totalAnimationTime: 3,
         cameraStartY: 7,
         cameraDistanceZ: 25,
         cameraEndY: 17,
         cameraFOV: 55,
-        cameraStartLookingAtShipFactor: 0.3,
+        cameraStartLookingAtShipFactor: 0.75,
         cameraStartLookingAtHeight: 5,
         cameraDoTilt: false,
         cameraShakePitch: 0.2,
@@ -62,9 +62,9 @@ function init() {
         cameraShakeDecay: 1.2,
         cameraShakeSpeed: 15,
         cameraShakeStart: 0.5,
-        spaceshipStartY: -10,
+        spaceshipStartY: -2,
         spaceshipEndY: 20,
-        spaceshipStartMovingFactor: 0.25,
+        spaceshipStartMovingFactor: 0.22,
         holeSize: 30,
         piecesSpeedFriction: 0.41,
         piecesRotationFriction: 0.112,
@@ -183,7 +183,7 @@ function init() {
     });
     filesWaitingToLoad++;
     
-    textureLoader.load('res/moontexture-greenhue-2048h.jpg', function (texture) {
+    textureLoader.load('res/moontexture-greenhue-1024square.jpg', function (texture) {
         moonMaterial.map = texture;
         //console.log("loaded moon", moonMaterial, texture);
         filesWaitingToLoad--;
