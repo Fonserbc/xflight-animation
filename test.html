@@ -1,0 +1,239 @@
+﻿<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <link rel="icon" href="favicon.svg" />
+    <meta charset="utf-8">
+    <meta name="description" content="The next frontier in beta-testing.">
+		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+		<title>xFlight</title>
+
+
+        <meta property="og:title" content="xFlight"/>
+        <meta property="og:description" content="The next frontier in beta-testing." />
+
+        <meta name="twitter:image:alt" content="xFlight Logo" />
+
+        <meta property="og:url" content="https://www.xflight.app"/>
+
+        <meta property="og:site_name" content="xFlight"/>
+        <meta property="og:type" content="" />
+
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:site" content="@briansuda" />
+
+
+    	<link href="https://fonts.googleapis.com/css?family=Montserrat:400,600,700&display=swap" rel="stylesheet">
+        <link href="style.css" rel="stylesheet">
+		<style>
+            {% include "style.css" %}
+
+            html { 
+              background-color: rgb(0,0,0);   
+              padding:0; 
+              margin:0 auto; 
+              text-align: center; 
+            }
+            body { 
+              background-color: rgb(0,0,0);
+              margin: 0  auto;
+              color: #fff; 
+              /*background: transparent url('https://xflight-main.s3-us-west-1.amazonaws.com/assets/public/bg_starfield%402x.jpg')  50% 0 repeat-x; */
+              background-image: url("https://xflight-main.s3-us-west-1.amazonaws.com/assets/public/2021options-04.jpg");
+              background-size: cover;
+              /*background-size: 1440px 1018px;*/
+              /*background-repeat: repeat-x;*/
+              /*background-attachment:fixed;*/
+              height: 100vh;
+              overflow: hidden;
+            }
+
+            input[type=checkbox]{ width: auto }
+            p { text-align: center; font-size: 18px; }
+            #login { position: static; font-weight: bold; top:0; right: 48px; text-align: center; z-index:100  }
+            /*#wormhole { margin-top: -30px; padding-left: 20px; max-width: 100% }*/
+            #headline {
+                font-weight: bold; font-size: 26px; line-height: 30px; margin: 0px;
+                -ms-transform: translate(0, -50%);
+                transform: translate(0, -50%);
+                margin-left: 20px;
+                margin-right: 20px;
+            }
+            @media only screen and (max-width: 850px) {
+              #headline { font-size: 22px; }
+            }
+            #moon { margin-top: -300px; max-width: 100%; }
+            .logo  { width: 160px; }
+
+            /*body>* { opacity: 0 }*/
+            @keyframes fadein {
+              from { opacity: 0 }
+              to   { opacity: 1 }
+            }
+
+            @keyframes fadeout {
+              from { opacity: 1 }
+              to   { opacity: 0 }
+            }
+
+            /*
+            body {
+                animation-name: fadein;
+                animation-duration: 1s; 
+                animation-timing-function: ease; 
+                animation-delay: 0s;
+                animation-direction: normal;
+                animation-iteration-count: 1;
+                animation-fill-mode: none;
+                animation-play-state: running; 
+            }
+
+           body>* {
+                animation-name: fadein;
+                animation-duration: 2s; 
+                animation-timing-function: ease; 
+                animation-delay: 1s;
+                animation-direction: normal;
+                animation-iteration-count: 1;
+                animation-fill-mode: forwards;
+                animation-play-state: running; 
+            }
+            */
+
+            .hidden-start {
+                opacity: 0;
+            }
+
+            #loading-bg-blocker {
+                opacity: 1;
+                width: 100%;
+                height: 100%;
+                background-color: rgb(0,0,0);
+                overflow: hidden;
+                margin: 0;
+                padding: 0;
+                text-align: center;
+            }
+
+            .animate-in {
+                animation-name: fadein;
+                animation-duration: 4s; 
+                animation-timing-function: ease; 
+                animation-delay: 0s;
+                animation-direction: normal;
+                animation-iteration-count: 1;
+                animation-fill-mode: forwards;
+                animation-play-state: running;
+            }
+
+            .animate-out {
+                animation-name: fadeout;
+                animation-duration: 2s; 
+                animation-timing-function: ease; 
+                animation-delay: 0s;
+                animation-direction: normal;
+                animation-iteration-count: 1;
+                animation-fill-mode: forwards;
+                animation-play-state: running;
+            }
+            
+            #c {
+                width: 100%;
+                height: 100%;
+                display: inline-block;
+                /*background-image: url("https://xflight-main.s3-us-west-1.amazonaws.com/assets/public/animation/res/option2_2kHeight.jpg");
+                background-size: cover;*/
+                position: absolute;
+                top:0px;
+                left:0px;
+                /*z-index: 0;*/
+                pointer-events: none;
+            }
+
+            #loading-gif {
+                opacity: 1;
+                background: url(http://fonserbc.net/xflight-animation/res/ship-loader.gif) no-repeat center center;
+                height: 100%;
+                width: 100%;
+                vertical-align: middle;
+                display: block;
+                overflow: hidden;
+                margin: 0;
+                padding: 0;
+                /*background-color: rgba(0,0,0,0);*/
+                position: absolute;
+                top: 0;
+            }
+            
+            
+            
+            .text {
+                /*z-index: 1;*/
+                position: absolute;
+                bottom: 0px;
+                top: 23vh;
+                width: 100vw;
+            }
+
+            .bottom-container{
+                display: table-cell;
+                width: 100vw;
+                position: absolute;
+                bottom: 0px;
+            }
+
+            .bottom-info {
+                display: table-cell;
+                vertical-align: bottom;
+                width: 100vw;
+            }
+            
+            .spacer-center {
+              height: 35vh;
+            }
+
+            .box {
+                padding: 0 4em;
+            }
+
+            .hidden {
+                display:none;
+            }
+
+            #loader-small {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 256px;
+                height: 256px;
+            }
+
+		</style>		
+  </head>
+   <body>
+			<!-- <img id="moon" src="https://xflight-main.s3-us-west-1.amazonaws.com/assets/public/planet-copy.png" alt="Moon" /> -->
+
+        <div id="fade-after-animation" class="text hidden-start">
+	        <p id="headline">On a Quest to make beta-testing virtually painless.</p>
+	        <!-- <img src="https://xflight-main.s3-us-west-1.amazonaws.com/assets/public/full-logo.svg" class="logo" alt="Logo" /><br/>
+
+         
+	        <img id="wormhole" src="https://xflight-main.s3-us-west-1.amazonaws.com/assets/public/wormhole.svg" class="trail" alt="Wormhole"  /> 
+            <img id="wormhole" src="https://xflight-main.s3-us-west-1.amazonaws.com/assets/public/wormhole.svg" />-->
+
+
+
+            <!--<div class="spacer-center"></div>-->
+            <div class="bottom-container">
+                <div class="bottom-info">
+                    <p style="padding:  0px 0 0 0; margin: 0; font-weight: 600; font-size: 24px; line-height: 30px;">Space Cadets Wanted</p>
+                    <p style="padding: 0 0 42px 0; margin: 0; font-size: 18px; line-height: 30px;">Be part of the next frontier in VR.</p>
+
+                    <a href="/beta" class=" box">Sign-up for early access</a>
+                    <p style="font-weight: 600; font-size: 18px line-height: 30px;">Coming Soon…</p>
+                    <p id="login"><a href="/dashboard">LOG IN</a></p>
+                </div>
+            </div>
+        </div>
+</body>
+</html>
