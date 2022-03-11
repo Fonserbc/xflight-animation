@@ -24,147 +24,41 @@
 
     <script type="module" src="./loadingAnimation.js"></script>
     
-    <script id="vertexShaderPieces" type="x-shader/x-vertex">
-        #extension GL_OES_standard_derivatives : enable
+    
+    <script id="vertexStars" type="x-shader/x-vertex">
         precision mediump float;
-    
-        //varying vec3 vNormal;
-        varying vec3 vPos;
-        varying vec2 screenPos;
-    
-        void main(void) {
-            vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
-            //vNormal = normalMatrix * normal;
-            
-            gl_Position = projectionMatrix * mvPosition;
-            screenPos = gl_Position.xy / gl_Position.w;
-            vPos = mvPosition.xyz;
-        }
-    </script>
-    <script id="fragmentShaderPieces" type="x-shader/x-fragment">
-        #extension GL_OES_standard_derivatives : enable
-        precision highp float;
-    
-        uniform sampler2D bgTexture;
-        uniform float textureRatio;
-        uniform float screenRatio;
-        varying vec2 screenPos;
         
-        //varying vec3 vNormal;
-        varying vec3 vPos;
+        attribute float scale;
 
-        bool isnan(float val)
-        {
-            return ( val < 0.0 || 0.0 < val || val == 0.0 ) ? false : true;
-        }
-        
-        void main(void) {
-            
-            vec2 coord = screenPos;
-            
-            vec3 fdx = vec3(dFdx(vPos.x),dFdx(vPos.y),dFdx(vPos.z));
-            vec3 fdy = vec3(dFdy(vPos.x),dFdy(vPos.y),dFdy(vPos.z));
-                
-            vec3 N = normalize(cross(fdx,fdy));
-            
-            vec3 normal = N;//normalize(vNormal);//N;//normalize(vNormal);
-            
-            float ratio = screenRatio / textureRatio;
-            if (ratio >= 1.0)
-            {
-                coord.y *= ratio;
-            }
-            else coord.x /= ratio;
-            
-            coord += vec2(1,1);
-            coord /= 2.0;
-            coord.x -= normal.x * 0.2;
-            coord.y -= normal.y * 0.2;
-            
-            //float shiningFactor = abs(normal.z);
-            //float shine = shiningFactor * shiningFactor * shiningFactor * shiningFactor * 0.05;
-            
-            gl_FragColor = vec4(texture2D(bgTexture, coord).rgb, 1);//, 1);// + 
-            //gl_FragColor = vec4(vec3(1,0,0), 1);//, 1);// + 
-        }
-    </script>
-    <script id="vertexTrail" type="x-shader/x-vertex">
-        precision mediump float;
-    
-        varying float transparency;
+        uniform float minSize;
+        uniform float maxSize;
+        uniform float speed;
+        uniform float time;
+        varying float size;
     
         void main(void) {
-            vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
-            transparency = 1.0 + position.y;
+
+            vec3 p = position;
+            p.z = -mod((p.z - time * speed), 1.0);
+
+            vec4 mvPosition = modelViewMatrix * vec4( p, 1.0 );
             
-            gl_Position = projectionMatrix * mvPosition;
+            size = max(0.0,mix(minSize, maxSize, scale) * ( 300.0 / - mvPosition.z ));
+			gl_PointSize = size;
+
+			gl_Position = projectionMatrix * mvPosition;
         }
     </script>
-    <script id="fragmentTrail" type="x-shader/x-fragment">
+    <script id="fragmentStars" type="x-shader/x-fragment">
         precision mediump float;
     
         uniform vec3 color;
-        varying float transparency;
+        varying float size;
         
         void main(void) {
             
-            float t = transparency * transparency * transparency;
-            
-            gl_FragColor = vec4(color, 1.0 - t);
-        }
-    </script>
-    <script id="vertexLine" type="x-shader/x-vertex">
-        precision mediump float;
-    
-        varying vec2 customUv;
-    
-        void main(void) {
-            vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
-            customUv = vec2(position.x, position.y);
-            
-            gl_Position = projectionMatrix * mvPosition;
-        }
-    </script>
-    <script id="fragmentLine" type="x-shader/x-fragment">
-        precision mediump float;
-    
-        uniform float ratio;
-        uniform vec3 color;
-        varying vec2 customUv;
-        
-        void main(void) {
-            
-            float roundRatio = ratio / 2.0;
-            
-            vec2 coord = vec2(customUv.x * 2.0, customUv.y);
-            float delta = 0.0085;
-            
-            if (customUv.y > roundRatio && customUv.y < 1.0 - roundRatio)
-            {
-                float a = min(1.0, max(0.0, (1.0 - abs(coord.x)) / delta));
-                gl_FragColor = vec4(color,a);
-                return;
-            }
-            
-            if (customUv.y < roundRatio) {
-                coord.y = 1.0 - customUv.y/roundRatio;
-            }
-            else if (customUv.y > 1.0 - roundRatio)
-            {
-                coord.y = customUv.y - (1.0 - roundRatio);
-                coord.y /= roundRatio;
-            }
-            
-            //coord.y /= ratio;
-            float r = length(coord);
-            if (r > 1.0) discard;
-            
-            if (r < 1.0 - delta)
-                gl_FragColor = vec4(color,1);
-            else {
-                float alpha = 1.0 - (r - (1.0 - delta))/delta;
-                gl_FragColor = vec4(color,alpha);
-            }
+            if (length( gl_PointCoord - vec2( 0.5, 0.5 ) ) > 0.475 ) discard;
+                gl_FragColor = vec4( mix(vec3(0,0,0), color, min(1.0, size * size)), 1.0);
         }
     </script>
 </body>

@@ -8,17 +8,20 @@ import Stats from "./lib/stats.js";
 import easing from "./lib/easings.js";
 import noise from "./lib/perlin.js";
 
-let canvas, stats, camera, scene, renderer, gui, guiData = {};
+let canvas, stats, camera, scene, renderer, gui, variables = {};
 let filesWaitingToLoad = 0;
 
 let cameraPivot;
 let logoPivot, logoGroup, logoMaterials = [];
 
 let holeGroup;
+let stars;
 let wormholeLines = [], wormholeCircles = [], distanceBetweenCircles, circleRadiusMax, circleRadiusMin, numberOfCircles;
 
 // Models
 let sphereModel, triplanarModel, orbitModel;
+
+let starsMaterial;
 
 let cameraShakeIntensity = 0;
 let cameraShakeSeed = Math.random();
@@ -65,8 +68,8 @@ function init() {
     cameraPivot.position.y = 0;
     scene.add(cameraPivot);
 
-    camera = new THREE.PerspectiveCamera(guiData.cameraFOV, window.innerWidth / window.innerHeight, 1, 1000);
-    camera.position.z = guiData.cameraDistanceZ;
+    camera = new THREE.PerspectiveCamera(variables.cameraFOV, window.innerWidth / window.innerHeight, 1, 1000);
+    camera.position.z = variables.cameraDistanceZ;
     cameraPivot.add(camera);
 
     createDebugGUI();
@@ -89,7 +92,7 @@ function init() {
     
     // logo
     logoPivot = new THREE.Object3D();
-    logoPivot.position.z = guiData.logoPosZ;
+    logoPivot.position.z = variables.logoPosZ;
     scene.add(logoPivot);
 
     // SVGs
@@ -104,7 +107,7 @@ function init() {
         var logoSideSize = 80 * scale;
         group.position.x = -logoSideSize;
         group.position.z = -1;
-        group.position.y = logoSideSize + 1.2 * scale;//guiData.spaceshipEndY
+        group.position.y = logoSideSize + 1.2 * scale;//variables.spaceshipEndY
         group.scale.y *= - 1;
         
         const alwaysVisibleGroup = new THREE.Group();
@@ -255,6 +258,55 @@ function init() {
     gltfLoader.load("res/3d/triplanar.glb",function (gltf) {
         triplanarModel.add(gltf.scene);
     });
+
+    // Starfield
+    initStars(variables.starCount);
+}
+
+function initStars(particleCount)
+{
+    const positions = new Float32Array( particleCount * 3 );
+	const scales = new Float32Array( particleCount );
+
+    for ( let i = 0; i < particleCount; i ++ ) {
+
+		const x = Math.random() - 0.5;
+		const y = Math.random() - 0.5 ;
+		const z = Math.random();
+
+		positions[i*3] = x;
+		positions[i*3 + 1] = y;
+		positions[i*3 + 2] = z;
+
+        scales[i] = Math.random();
+	}
+
+    const geometry = new THREE.BufferGeometry();
+	geometry.setAttribute( 'position', new THREE.BufferAttribute( positions, 3 ) );
+	geometry.setAttribute( 'scale', new THREE.BufferAttribute( scales, 1 ) );
+
+	starsMaterial = new THREE.ShaderMaterial( {
+		uniforms: {
+            time: { value: 0 },
+			color: { value: new THREE.Color( 0xffffff ) },
+            minSize: { value: variables.starsMinSize },
+            maxSize: { value: variables.starsMaxSize },
+            speed: { value: variables.starsSpeed },
+            distanceFalloff: { value: variables.starsFalloff }
+		},
+		vertexShader: document.getElementById( 'vertexStars' ).textContent,
+		fragmentShader: document.getElementById( 'fragmentStars' ).textContent
+
+	} );
+
+	//
+
+    if (stars != null) {
+        scene.remove(stars);
+    }
+	stars = new THREE.Points( geometry, starsMaterial );
+    stars.position.z = 10;
+	scene.add( stars );
 }
 
 
@@ -267,60 +319,83 @@ function createDebugGUI ()
     // GUI
     
     var logoGUI = gui.addFolder("Logo");
-    guiData["logoSize"] = 1;
-    logoGUI.add(guiData, "logoSize", 0.001, 20).name("Logo Size")
+    variables["logoSize"] = 1;
+    logoGUI.add(variables, "logoSize", 0.001, 20).name("Logo Size")
     .onChange(function () {
-        logoGroup.scale.set(guiData.logoSize, guiData.logoSize, guiData.logoSize);
+        logoGroup.scale.set(variables.logoSize, variables.logoSize, variables.logoSize);
     });
-    guiData["logoPosZ"] = -10;
-    logoGUI.add(guiData, "logoPosZ").name("Logo Position Z");
-    guiData["logoAlpha"] = 1;
-    logoGUI.add(guiData, "logoAlpha", 0, 1).name("Logo Transparency")
+    variables["logoPosZ"] = -10;
+    logoGUI.add(variables, "logoPosZ").name("Logo Position Z");
+    variables["logoAlpha"] = 1;
+    logoGUI.add(variables, "logoAlpha", 0, 1).name("Logo Transparency")
     .onChange(function () {
-        setLogoTransparency(guiData.logoAlpha);
+        setLogoTransparency(variables.logoAlpha);
     });
 
     var cameraGUI = gui.addFolder("Camera");
-    guiData["cameraDistanceZ"] = 10;
-    cameraGUI.add(guiData, "cameraDistanceZ", 0, 50).name("Z distance");
-    guiData["cameraFOV"] = 55;
-    cameraGUI.add(guiData, "cameraFOV", 10, 90).name("Field of View")
+    variables["cameraDistanceZ"] = 10;
+    cameraGUI.add(variables, "cameraDistanceZ", 0, 50).name("Z distance");
+    variables["cameraFOV"] = 55;
+    cameraGUI.add(variables, "cameraFOV", 10, 90).name("Field of View")
     .onChange(function () {
-        camera.fov = guiData.cameraFOV; camera.updateProjectionMatrix();
+        camera.fov = variables.cameraFOV; camera.updateProjectionMatrix();
     });
-    guiData["cameraRotationAngle"] = 20;
-    cameraGUI.add(guiData, "cameraRotationAngle", 2, 179).name("Mouse rotation max angle");
-
+    variables["cameraRotationAngle"] = 20;
+    cameraGUI.add(variables, "cameraRotationAngle", 2, 179).name("Mouse rotation max angle");
     
     var holeGUI = gui.addFolder("Wormhole");
-    guiData["holeSize"] = 10;
-    holeGUI.add(guiData, "holeSize", 0, 100).name("size").onChange(function () {
-        holeGroup.scale.set(guiData.holeSize, guiData.holeSize, guiData.holeSize);
+    variables["holeSize"] = 10;
+    holeGUI.add(variables, "holeSize", 0, 100).name("size").onChange(function () {
+        holeGroup.scale.set(variables.holeSize, variables.holeSize, variables.holeSize);
     });
-    guiData["wormholeRotationSpeed"] = 0;
-    holeGUI.add(guiData, "wormholeRotationSpeed").name("lines rotation speed");
-    guiData["wormholeFallingSpeed"] = 0.5;
-    holeGUI.add(guiData, "wormholeFallingSpeed", 0, 3).name("circles falling speed");
+    variables["wormholeRotationSpeed"] = 0;
+    holeGUI.add(variables, "wormholeRotationSpeed").name("lines rotation speed");
+    variables["wormholeFallingSpeed"] = 0.5;
+    holeGUI.add(variables, "wormholeFallingSpeed", 0, 3).name("circles falling speed");
+
+    
+    var starsGUI = gui.addFolder("Stars");
+    variables["starColor"] = 0xffffff;
+    starsGUI.addColor(variables, "starColor").onChange(function() {
+        starsMaterial.uniforms.color.value.set(variables.starColor);
+    });
+    variables["starCount"] = 2048;
+    starsGUI.add(variables, "starCount");
+    variables["regenerateStars"] = function() {
+        initStars(variables["starCount"]);
+    };
+    starsGUI.add(variables, "regenerateStars").name("regenerate stars");
+    variables["starsDepth"] = 200;
+    starsGUI.add(variables, "starsDepth", 1, 1000);
+    variables["starsWidth"] = 50;
+    starsGUI.add(variables, "starsWidth", 0, 100);
+    variables["starsSpeed"] = 0.02;
+    starsGUI.add(variables, "starsSpeed", 0, 2);
+    variables["starsMinSize"] = 0.1;
+    starsGUI.add(variables, "starsMinSize", 0, 100);
+    variables["starsMaxSize"] = 1;
+    starsGUI.add(variables, "starsMaxSize", 0, 100);
+
     
     
     var modelsGUI = gui.addFolder("Models");
-    guiData["spherePos"] = new THREE.Vector3();
+    variables["spherePos"] = new THREE.Vector3();
     let spherePosGUI = modelsGUI.addFolder("sphere position");
-    spherePosGUI.add(guiData.spherePos, "x", -10, 10);
-    spherePosGUI.add(guiData.spherePos, "y", -10, 10);
-    spherePosGUI.add(guiData.spherePos, "z", -10, 10);
+    spherePosGUI.add(variables.spherePos, "x", -10, 10);
+    spherePosGUI.add(variables.spherePos, "y", -10, 10);
+    spherePosGUI.add(variables.spherePos, "z", -10, 10);
     
-    guiData["triplanarPos"] = new THREE.Vector3(-3,0,0);
+    variables["triplanarPos"] = new THREE.Vector3(-3,0,0);
     let triplanarPosGUI = modelsGUI.addFolder("triplanar position");
-    triplanarPosGUI.add(guiData.triplanarPos, "x", -10, 10);
-    triplanarPosGUI.add(guiData.triplanarPos, "y", -10, 10);
-    triplanarPosGUI.add(guiData.triplanarPos, "z", -10, 10);
+    triplanarPosGUI.add(variables.triplanarPos, "x", -10, 10);
+    triplanarPosGUI.add(variables.triplanarPos, "y", -10, 10);
+    triplanarPosGUI.add(variables.triplanarPos, "z", -10, 10);
     
-    guiData["orbitPos"] = new THREE.Vector3(3,0,0);
+    variables["orbitPos"] = new THREE.Vector3(3,0,0);
     let orbitPosGUI = modelsGUI.addFolder("orbit position");
-    orbitPosGUI.add(guiData.orbitPos, "x", -10, 10);
-    orbitPosGUI.add(guiData.orbitPos, "y", -10, 10);
-    orbitPosGUI.add(guiData.orbitPos, "z", -10, 10);
+    orbitPosGUI.add(variables.orbitPos, "x", -10, 10);
+    orbitPosGUI.add(variables.orbitPos, "y", -10, 10);
+    orbitPosGUI.add(variables.orbitPos, "z", -10, 10);
 
     //gui.closed = true;
 
@@ -382,11 +457,11 @@ function render() {
 }
 
 function update(deltaTime) {
-    camera.position.z = guiData.cameraDistanceZ;
+    camera.position.z = variables.cameraDistanceZ;
 
     cameraPivot.quaternion.setFromEuler(new THREE.Euler(
-        THREE.MathUtils.degToRad(mouseNormalizedPos.y * guiData.cameraRotationAngle),
-        THREE.MathUtils.degToRad(mouseNormalizedPos.x * guiData.cameraRotationAngle),
+        THREE.MathUtils.degToRad(mouseNormalizedPos.y * variables.cameraRotationAngle),
+        THREE.MathUtils.degToRad(mouseNormalizedPos.x * variables.cameraRotationAngle),
         0));
 
     // Shaking
@@ -395,11 +470,11 @@ function update(deltaTime) {
     {
         let eulerAngles = new THREE.Euler();
         let intensity_sq = cameraShakeIntensity * cameraShakeIntensity;
-        let t = time * guiData.cameraShakeSpeed;
+        let t = time * variables.cameraShakeSpeed;
 
-        eulerAngles.x = intensity_sq * guiData.cameraShakePitch * 0.0174533 * 2 * (noise.simplex2(cameraShakeSeed, t) - 0.5); // deg to rad = 0.0174533
-        eulerAngles.y = intensity_sq * guiData.cameraShakeYaw * 0.0174533 * 2 * (noise.simplex2(cameraShakeSeed + 1, t) - 0.5);
-        eulerAngles.z = intensity_sq * guiData.cameraShakeRoll * 0.0174533 * 2 * (noise.simplex2(cameraShakeSeed + 2, t) - 0.5);
+        eulerAngles.x = intensity_sq * variables.cameraShakePitch * 0.0174533 * 2 * (noise.simplex2(cameraShakeSeed, t) - 0.5); // deg to rad = 0.0174533
+        eulerAngles.y = intensity_sq * variables.cameraShakeYaw * 0.0174533 * 2 * (noise.simplex2(cameraShakeSeed + 1, t) - 0.5);
+        eulerAngles.z = intensity_sq * variables.cameraShakeRoll * 0.0174533 * 2 * (noise.simplex2(cameraShakeSeed + 2, t) - 0.5);
 
         camera.quaternion.setFromEuler(eulerAngles);
     }
@@ -407,18 +482,18 @@ function update(deltaTime) {
         camera.quaternion.identity();
     }
     
-    logoPivot.position.z = guiData.logoPosZ;
+    logoPivot.position.z = variables.logoPosZ;
     
     // Wormhole lines
     var wormholeAxis = new THREE.Vector3(0,1,0);
     for (let i = 0; i < wormholeLines.length; ++i) {
-        var r = time * (i + 1)/wormholeLines.length * Math.PI * guiData.wormholeRotationSpeed;
+        var r = time * (i + 1)/wormholeLines.length * Math.PI * variables.wormholeRotationSpeed;
         if (i % 2 == 0) r = -r;
         wormholeLines[i].quaternion.setFromAxisAngle(wormholeAxis, r);
     }
 
     // Wormhole circles
-    let holeDepth = time * guiData.wormholeFallingSpeed;
+    let holeDepth = time * variables.wormholeFallingSpeed;
     let holeFactor = holeDepth / distanceBetweenCircles;
     holeFactor = holeFactor - Math.floor(holeFactor);
 
@@ -431,9 +506,17 @@ function update(deltaTime) {
     }
 
     // Models
-    sphereModel.position.copy(guiData.spherePos);
-    triplanarModel.position.copy(guiData.triplanarPos);
-    orbitModel.position.copy(guiData.orbitPos);
+    sphereModel.position.copy(variables.spherePos);
+    triplanarModel.position.copy(variables.triplanarPos);
+    orbitModel.position.copy(variables.orbitPos);
+
+    //
+    starsMaterial.uniforms.time.value = time;
+    starsMaterial.uniforms.minSize.value = variables.starsMinSize;
+    starsMaterial.uniforms.maxSize.value = variables.starsMaxSize;
+    starsMaterial.uniforms.speed.value = variables.starsSpeed;
+
+    stars.scale.set(variables.starsWidth, variables.starsWidth, variables.starsDepth);
 }
 
 function mousemove(e) {
