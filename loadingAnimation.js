@@ -75,7 +75,7 @@ function init() {
         endBreakingTime: 0.25,
         piecesPostBreakStay: 0,
         piecesPostBreakAmount: 0.03,
-        logoFadeinStart: 1,
+        logoFadeinStart: 0.3,
         logoFadeinEnd: 1.3,
         moonSize: 22,
         moonRPM: 0.3,
