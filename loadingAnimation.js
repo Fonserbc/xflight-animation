@@ -237,22 +237,23 @@ function init() {
 
     // Models
     const gltfLoader = new GLTFLoader();
+    sphereModel = new THREE.Group();
+    triplanarModel = new THREE.Group();
+    orbitModel = new THREE.Group();
+    scene.add(sphereModel);
+    scene.add(triplanarModel);
+    scene.add(orbitModel);
+
     gltfLoader.load("res/3d/sphere.glb",function (gltf) {
-        sphereModel = new THREE.Group();
         sphereModel.add(gltf.scene);
-        scene.add(sphereModel);
     });
     
     gltfLoader.load("res/3d/orbit.glb",function (gltf) {
-        triplanarModel = new THREE.Group();
-        triplanarModel.add(gltf.scene);
-        scene.add(triplanarModel);
+        orbitModel.add(gltf.scene);
     });
     
     gltfLoader.load("res/3d/triplanar.glb",function (gltf) {
-        orbitModel = new THREE.Group();
-        orbitModel.add(gltf.scene);
-        scene.add(orbitModel);
+        triplanarModel.add(gltf.scene);
     });
 }
 
