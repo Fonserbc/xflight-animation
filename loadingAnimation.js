@@ -350,8 +350,6 @@ function resizeRendererToDisplaySize(renderer) {
         renderer.setSize(window.innerWidth, window.innerHeight);
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
-        if (piecesMaterial !== undefined && piecesMaterial != null)
-            piecesMaterial.uniforms.screenRatio.value = width / height;
     }
     return needResize;
 }
