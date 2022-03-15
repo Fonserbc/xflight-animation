@@ -26,6 +26,7 @@ let DEBUG_plane;
 let cameraShakeIntensity = 0;
 let cameraShakeSeed = Math.random();
 let rockCrashed = false;
+let piecesMaterial;
 
 var moveTowards = function(from, to, delta)
 {
@@ -48,7 +49,7 @@ function init() {
 
     guiData = {
         spaceshipLogoSize: 1,
-        totalAnimationTime: 3,
+        totalAnimationTime: 3.75,
         cameraStartY: 7,
         cameraDistanceZ: 25,
         cameraEndY: 17,
@@ -64,7 +65,7 @@ function init() {
         cameraShakeStart: 0.5,
         spaceshipStartY: -2,
         spaceshipEndY: 20,
-        spaceshipStartMovingFactor: 0.22,
+        spaceshipStartMovingFactor: 0.14,
         holeSize: 30,
         piecesSpeedFriction: 0.41,
         piecesRotationFriction: 0.112,
@@ -72,11 +73,11 @@ function init() {
         piecesSpeed: 170,
         piecesVerticalMovementFactor: 96,
         startBreakingTime: 0.05,
-        endBreakingTime: 0.25,
+        endBreakingTime: 0.14,
         piecesPostBreakStay: 0,
         piecesPostBreakAmount: 0.03,
-        logoFadeinStart: 0.3,
-        logoFadeinEnd: 1.3,
+        logoFadeinStart: 0.75,
+        logoFadeinEnd: 1,
         moonSize: 22,
         moonRPM: 0.3,
         moonPositionY: 70,
@@ -147,7 +148,7 @@ function init() {
     //    reflectivity: 1,
     //    envMap: envBGTexture
     //});
-    const piecesMaterial = new THREE.ShaderMaterial({
+    piecesMaterial = new THREE.ShaderMaterial({
         //side: THREE.DoubleSide,
         uniforms: {
             screenRatio: { value: window.innerWidth / window.innerHeight},
